@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: citus-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: citus-worker }
+  template:
+    metadata:
+      labels: { app: citus-worker }
+    spec:
+      containers:
+      - name: citus-worker
+        image: citusdata/citus:postgres_16
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        ports:
+        - containerPort: 5432
+        args: ["-c","shared_preload_libraries=citus"]
