@@ -1,6 +1,6 @@
--- init_extended.sql
--- Inicialización ampliada del esquema 'hcd' para el parcial
--- Diseñado para PostgreSQL + Citus (distribución por documento_id / atencion_id)
+-- init_fixed.sql - Versión 2
+-- Inicialización corregida del esquema 'hcd' para Citus
+-- Ajustado para constraints compatibles con distribución
 
 -- 1) Extensiones necesarias
 CREATE EXTENSION IF NOT EXISTS citus;
@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 2) Schema
 CREATE SCHEMA IF NOT EXISTS hcd;
 
--- 3) Tabla usuario: datos de identificación del paciente
+-- 3) Tabla usuario: datos de identificaci�n del paciente
 CREATE TABLE IF NOT EXISTS hcd.usuario (
   documento_id BIGINT PRIMARY KEY,
   tipo_documento VARCHAR(30),
@@ -39,12 +39,12 @@ CREATE TABLE IF NOT EXISTS hcd.usuario (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-COMMENT ON TABLE hcd.usuario IS 'Tabla de identificación del paciente (Resolución 1995/1999, Ley 1581/2012 - datos sensibles)';
+COMMENT ON TABLE hcd.usuario IS 'Tabla de identificaci�n del paciente (Resoluci�n 1995/1999, Ley 1581/2012 - datos sensibles)';
 
 CREATE INDEX IF NOT EXISTS idx_usuario_correo ON hcd.usuario (correo_electronico);
 CREATE INDEX IF NOT EXISTS idx_usuario_celular ON hcd.usuario (celular);
 
--- 4) Tabla profesional_salud
+-- 4) Tabla profesional_salud (ser� tabla de referencia)
 CREATE TABLE IF NOT EXISTS hcd.profesional_salud (
   id_personal_salud UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nombre_completo VARCHAR(255),
@@ -58,9 +58,10 @@ CREATE TABLE IF NOT EXISTS hcd.profesional_salud (
 
 COMMENT ON TABLE hcd.profesional_salud IS 'Datos del profesional que atiende';
 
--- 5) Tabla atencion: datos administrativos y clínicos por episodio
+-- 5) Tabla atencion: CLAVE COMPUESTA (documento_id, atencion_id)
+-- Para cumplir con requisito de Citus: PK debe incluir columna de distribuci�n
 CREATE TABLE IF NOT EXISTS hcd.atencion (
-  atencion_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  atencion_id UUID DEFAULT uuid_generate_v4(),
   documento_id BIGINT NOT NULL,
   fecha_hora_atencion TIMESTAMP WITH TIME ZONE NOT NULL,
   tipo_atencion VARCHAR(80),
@@ -88,43 +89,43 @@ CREATE TABLE IF NOT EXISTS hcd.atencion (
   educacion_consejeria TEXT,
   referencia_contrarreferencia TEXT,
   estado_egreso VARCHAR(80),
-  profesional_responsable UUID REFERENCES hcd.profesional_salud(id_personal_salud),
+  profesional_responsable UUID,
   firma_paciente_path TEXT,
   fecha_hora_cierre TIMESTAMP WITH TIME ZONE,
   responsable_registro VARCHAR(120),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  PRIMARY KEY (documento_id, atencion_id)  -- Clave compuesta incluyendo columna de distribuci�n
 );
 
-COMMENT ON TABLE hcd.atencion IS 'Tabla con datos administrativos y clínicos por episodio de atención';
+COMMENT ON TABLE hcd.atencion IS 'Tabla con datos administrativos y cl�nicos por episodio de atenci�n';
 
--- 6) FK lógico entre atencion y usuario (se puede usar como constraint)
-ALTER TABLE IF EXISTS hcd.atencion
-  ADD CONSTRAINT IF NOT EXISTS fk_atencion_usuario FOREIGN KEY (documento_id) REFERENCES hcd.usuario (documento_id) ON DELETE CASCADE;
-
--- Índices de consulta rápida
-CREATE INDEX IF NOT EXISTS idx_atencion_doc_fecha ON hcd.atencion (documento_id, fecha_hora_atencion);
+-- �ndices de consulta r�pida
+CREATE INDEX IF NOT EXISTS idx_atencion_atencion_id ON hcd.atencion (atencion_id);
+CREATE INDEX IF NOT EXISTS idx_atencion_fecha ON hcd.atencion (documento_id, fecha_hora_atencion);
 CREATE INDEX IF NOT EXISTS idx_atencion_estado_egreso ON hcd.atencion (estado_egreso);
 
--- 7) Tabla diagnostico (por atencion)
+-- 6) Tabla diagnostico: CLAVE COMPUESTA
 CREATE TABLE IF NOT EXISTS hcd.diagnostico (
-  diagnostico_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  diagnostico_id UUID DEFAULT uuid_generate_v4(),
   atencion_id UUID NOT NULL,
+  documento_id BIGINT NOT NULL,  -- Necesario para co-localizaci�n
   tipo_diagnostico VARCHAR(80),
   diagnostico_text TEXT,
   codigo_cie10 VARCHAR(30),
   gravedad VARCHAR(50),
   registro_medico JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  CONSTRAINT fk_diag_atencion FOREIGN KEY (atencion_id) REFERENCES hcd.atencion(atencion_id) ON DELETE CASCADE
+  PRIMARY KEY (documento_id, diagnostico_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_diag_atencion ON hcd.diagnostico (atencion_id);
 
--- 8) Tabla tecnologia_salud (medicamentos/procedimientos aplicados)
+-- 7) Tabla tecnologia_salud: CLAVE COMPUESTA
 CREATE TABLE IF NOT EXISTS hcd.tecnologia_salud (
-  tecnologia_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tecnologia_id UUID DEFAULT uuid_generate_v4(),
   atencion_id UUID NOT NULL,
+  documento_id BIGINT NOT NULL,  -- Necesario para co-localizaci�n
   descripcion_medicamento TEXT,
   dosis VARCHAR(80),
   via_administracion VARCHAR(80),
@@ -135,56 +136,152 @@ CREATE TABLE IF NOT EXISTS hcd.tecnologia_salud (
   finalidad_tecnologia TEXT,
   registro_administracion JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  CONSTRAINT fk_tec_atencion FOREIGN KEY (atencion_id) REFERENCES hcd.atencion(atencion_id) ON DELETE CASCADE,
-  CONSTRAINT fk_tec_profesional FOREIGN KEY (id_personal_salud) REFERENCES hcd.profesional_salud(id_personal_salud)
+  PRIMARY KEY (documento_id, tecnologia_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_tec_atencion ON hcd.tecnologia_salud (atencion_id);
 
--- 9) Tabla egreso (resumen de salida)
+-- 8) Tabla egreso: CLAVE COMPUESTA
 CREATE TABLE IF NOT EXISTS hcd.egreso (
-  egreso_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  egreso_id UUID DEFAULT uuid_generate_v4(),
   atencion_id UUID NOT NULL,
+  documento_id BIGINT NOT NULL,  -- Necesario para co-localizaci�n
   estado_egreso VARCHAR(80),
   causas_egreso TEXT,
   recomendaciones_al_egreso TEXT,
   fecha_egreso TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  CONSTRAINT fk_egreso_atencion FOREIGN KEY (atencion_id) REFERENCES hcd.atencion(atencion_id) ON DELETE CASCADE
+  PRIMARY KEY (documento_id, egreso_id)
 );
 
--- 10) Triggers para actualizar updated_at en tablas principales
-CREATE OR REPLACE FUNCTION hcd.trigger_set_timestamp()
-RETURNS trigger AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- 9) PRIMERO: Crear tabla de referencia (debe hacerse ANTES de distribuir otras tablas)
+SELECT create_reference_table('hcd.profesional_salud');
 
-DROP TRIGGER IF EXISTS trg_usuario_updated_at ON hcd.usuario;
-CREATE TRIGGER trg_usuario_updated_at BEFORE UPDATE ON hcd.usuario FOR EACH ROW EXECUTE FUNCTION hcd.trigger_set_timestamp();
-
-DROP TRIGGER IF EXISTS trg_atencion_updated_at ON hcd.atencion;
-CREATE TRIGGER trg_atencion_updated_at BEFORE UPDATE ON hcd.atencion FOR EACH ROW EXECUTE FUNCTION hcd.trigger_set_timestamp();
-
--- 11) Distribuir tablas con Citus (ejecutar en el coordinator)
+-- 10) DISTRIBUIR TABLAS CON CITUS
 SELECT create_distributed_table('hcd.usuario', 'documento_id');
 SELECT create_distributed_table('hcd.atencion', 'documento_id');
-SELECT create_distributed_table('hcd.diagnostico', 'atencion_id');
-SELECT create_distributed_table('hcd.tecnologia_salud', 'atencion_id');
-SELECT create_distributed_table('hcd.profesional_salud', 'id_personal_salud');
-SELECT create_distributed_table('hcd.egreso', 'atencion_id');
 
--- 12) Datos de prueba mínimos (INSERT)
+-- Co-localizar tablas relacionadas (todas por documento_id para mantener datos juntos)
+SELECT create_distributed_table('hcd.diagnostico', 'documento_id', colocate_with => 'hcd.atencion');
+SELECT create_distributed_table('hcd.tecnologia_salud', 'documento_id', colocate_with => 'hcd.atencion');
+SELECT create_distributed_table('hcd.egreso', 'documento_id', colocate_with => 'hcd.atencion');
+
+-- 11) AGREGAR FOREIGN KEYS (despu�s de distribuir)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_atencion_usuario'
+  ) THEN
+    ALTER TABLE hcd.atencion
+      ADD CONSTRAINT fk_atencion_usuario 
+      FOREIGN KEY (documento_id) 
+      REFERENCES hcd.usuario (documento_id) 
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_diag_atencion'
+  ) THEN
+    ALTER TABLE hcd.diagnostico
+      ADD CONSTRAINT fk_diag_atencion 
+      FOREIGN KEY (documento_id, atencion_id) 
+      REFERENCES hcd.atencion(documento_id, atencion_id) 
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_tec_atencion'
+  ) THEN
+    ALTER TABLE hcd.tecnologia_salud
+      ADD CONSTRAINT fk_tec_atencion 
+      FOREIGN KEY (documento_id, atencion_id) 
+      REFERENCES hcd.atencion(documento_id, atencion_id) 
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_tec_profesional'
+  ) THEN
+    ALTER TABLE hcd.tecnologia_salud
+      ADD CONSTRAINT fk_tec_profesional 
+      FOREIGN KEY (id_personal_salud) 
+      REFERENCES hcd.profesional_salud(id_personal_salud);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_atencion_profesional'
+  ) THEN
+    ALTER TABLE hcd.atencion
+      ADD CONSTRAINT fk_atencion_profesional 
+      FOREIGN KEY (profesional_responsable) 
+      REFERENCES hcd.profesional_salud(id_personal_salud);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_egreso_atencion'
+  ) THEN
+    ALTER TABLE hcd.egreso
+      ADD CONSTRAINT fk_egreso_atencion 
+      FOREIGN KEY (documento_id, atencion_id) 
+      REFERENCES hcd.atencion(documento_id, atencion_id) 
+      ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- 12) Datos de prueba m�nimos
 INSERT INTO hcd.usuario(documento_id, tipo_documento, primer_apellido, primer_nombre, fecha_nacimiento, sexo, correo_electronico)
 VALUES (1001001001,'CC','Reyes','Jaider','1990-05-12','M','jaider@example.com')
 ON CONFLICT (documento_id) DO NOTHING;
 
-INSERT INTO hcd.atencion(documento_id, fecha_hora_atencion, tipo_atencion, motivo_consulta, signos_vitales, estado_egreso)
-VALUES (1001001001, now(), 'consulta externa', 'Dolor de cabeza', jsonb_build_object('ta','120/80','fc',72,'fr',16,'temp',36.6,'sat',98,'peso',70,'talla',1.75,'imc',22.9), 'activo')
-RETURNING atencion_id;
+-- Insertar un profesional de salud
+INSERT INTO hcd.profesional_salud(nombre_completo, tipo_profesional, registro_profesional)
+VALUES ('Dr. Juan P�rez', 'M�dico General', 'RM-12345')
+RETURNING id_personal_salud;
 
--- 13) Privilegios (ejemplo mínimo)
+-- Insertar atenci�n (guardar el UUID generado para referencia)
+WITH nueva_atencion AS (
+  INSERT INTO hcd.atencion(documento_id, fecha_hora_atencion, tipo_atencion, motivo_consulta, signos_vitales, estado_egreso)
+  VALUES (
+    1001001001, 
+    now(), 
+    'consulta externa', 
+    'Dolor de cabeza', 
+    jsonb_build_object('ta','120/80','fc',72,'fr',16,'temp',36.6,'sat',98,'peso',70,'talla',1.75,'imc',22.9), 
+    'activo'
+  )
+  RETURNING documento_id, atencion_id
+)
+SELECT * FROM nueva_atencion;
+
+-- 13) Privilegios
 GRANT USAGE ON SCHEMA hcd TO public;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA hcd TO public;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA hcd TO public;
+
+-- 14) Verificaci�n final
+SELECT 'Setup completado exitosamente' AS status;
+
+-- 15) Informaci�n de distribuci�n
+SELECT 
+  logicalrelid::text AS tabla,
+  partmethod AS metodo,
+  partkey AS columna_distribucion,
+  colocationid AS grupo_colocacion
+FROM pg_dist_partition
+WHERE logicalrelid::text LIKE 'hcd.%'
+ORDER BY logicalrelid;
