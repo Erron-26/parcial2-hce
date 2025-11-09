@@ -305,4 +305,4 @@ SELECT
   'Síndrome coronario agudo en estudio',
   ARRAY['I20.0'],
   'Hospitalizado',
-  (SELECT id_personal_salud FROM hcd.profesional_salud WHERE tipo_profesional = 'Mé
+  (SELECT id_personal_salud FROM hcd.profesional_salud WHERE tipo_profesional = 'Médico Internista' LIMIT 1);

@@ -22,6 +22,7 @@ kind: Service
 metadata:
   name: citus-coordinator
 spec:
+  type: NodePort
   selector:
     app: citus-coordinator
   ports:

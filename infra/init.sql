@@ -1,7 +1,3 @@
--- init_fixed.sql - Versión 2
--- Inicialización corregida del esquema 'hcd' para Citus
--- Ajustado para constraints compatibles con distribución
-
 -- 1) Extensiones necesarias
 CREATE EXTENSION IF NOT EXISTS citus;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -155,16 +151,17 @@ CREATE TABLE IF NOT EXISTS hcd.egreso (
 );
 
 -- 9) PRIMERO: Crear tabla de referencia (debe hacerse ANTES de distribuir otras tablas)
-SELECT create_reference_table('hcd.profesional_salud');
+-- SELECT create_reference_table('hcd.profesional_salud');
 
 -- 10) DISTRIBUIR TABLAS CON CITUS
-SELECT create_distributed_table('hcd.usuario', 'documento_id');
-SELECT create_distributed_table('hcd.atencion', 'documento_id');
+-- COMENTADAS: Se ejecutarán después de registrar los workers
+-- SELECT create_distributed_table('hcd.usuario', 'documento_id');
+-- SELECT create_distributed_table('hcd.atencion', 'documento_id');
 
 -- Co-localizar tablas relacionadas (todas por documento_id para mantener datos juntos)
-SELECT create_distributed_table('hcd.diagnostico', 'documento_id', colocate_with => 'hcd.atencion');
-SELECT create_distributed_table('hcd.tecnologia_salud', 'documento_id', colocate_with => 'hcd.atencion');
-SELECT create_distributed_table('hcd.egreso', 'documento_id', colocate_with => 'hcd.atencion');
+-- SELECT create_distributed_table('hcd.diagnostico', 'documento_id', colocate_with => 'hcd.atencion');
+-- SELECT create_distributed_table('hcd.tecnologia_salud', 'documento_id', colocate_with => 'hcd.atencion');
+-- SELECT create_distributed_table('hcd.egreso', 'documento_id', colocate_with => 'hcd.atencion');
 
 -- 11) AGREGAR FOREIGN KEYS (despu�s de distribuir)
 DO $$
@@ -243,45 +240,13 @@ BEGIN
   END IF;
 END $$;
 
--- 12) Datos de prueba m�nimos
-INSERT INTO hcd.usuario(documento_id, tipo_documento, primer_apellido, primer_nombre, fecha_nacimiento, sexo, correo_electronico)
-VALUES (1001001001,'CC','Reyes','Jaider','1990-05-12','M','jaider@example.com')
-ON CONFLICT (documento_id) DO NOTHING;
+-- )
+-- SELECT * FROM nueva_atencion;
 
--- Insertar un profesional de salud
-INSERT INTO hcd.profesional_salud(nombre_completo, tipo_profesional, registro_profesional)
-VALUES ('Dr. Juan P�rez', 'M�dico General', 'RM-12345')
-RETURNING id_personal_salud;
-
--- Insertar atenci�n (guardar el UUID generado para referencia)
-WITH nueva_atencion AS (
-  INSERT INTO hcd.atencion(documento_id, fecha_hora_atencion, tipo_atencion, motivo_consulta, signos_vitales, estado_egreso)
-  VALUES (
-    1001001001, 
-    now(), 
-    'consulta externa', 
-    'Dolor de cabeza', 
-    jsonb_build_object('ta','120/80','fc',72,'fr',16,'temp',36.6,'sat',98,'peso',70,'talla',1.75,'imc',22.9), 
-    'activo'
-  )
-  RETURNING documento_id, atencion_id
-)
-SELECT * FROM nueva_atencion;
-
--- 13) Privilegios
+-- 12) Privilegios
 GRANT USAGE ON SCHEMA hcd TO public;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA hcd TO public;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA hcd TO public;
 
--- 14) Verificaci�n final
-SELECT 'Setup completado exitosamente' AS status;
-
--- 15) Informaci�n de distribuci�n
-SELECT 
-  logicalrelid::text AS tabla,
-  partmethod AS metodo,
-  partkey AS columna_distribucion,
-  colocationid AS grupo_colocacion
-FROM pg_dist_partition
-WHERE logicalrelid::text LIKE 'hcd.%'
-ORDER BY logicalrelid;
+-- 13) Verificación final - Se mostrará después de distribuir tablas
+SELECT 'Esquema HCD creado exitosamente. Distribución de tablas se hará en el setup.sh' AS status;
