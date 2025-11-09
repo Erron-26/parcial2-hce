@@ -1,26 +1,6 @@
 -- init_extended.sql
 -- Inicialización ampliada del esquema 'hcd' para el parcial
 -- Diseñado para PostgreSQL + Citus (distribución por documento_id / atencion_id)
--- NOTA: ejecutar esto en el POD coordinador (psql). El script es idempotente en la mayoría de objetos.
-
--- 0) Crear la base de datos si no existe (robusto en psql)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'interop_db') THEN
-    PERFORM dblink_exec('dbname=postgres', $$CREATE DATABASE interop_db$$);
-  END IF;
-EXCEPTION WHEN undefined_function THEN
-  -- dblink_exec puede no estar disponible; intentar crear de forma simple y capturar error
-  BEGIN
-    CREATE DATABASE interop_db;
-  EXCEPTION WHEN others THEN
-    RAISE NOTICE 'CREATE DATABASE interop_db falló o ya existe: %', SQLERRM;
-  END;
-END;
-$$ LANGUAGE plpgsql;
-
--- Conectar a la base de datos (si estás en psql esto funcionará)
-\connect interop_db
 
 -- 1) Extensiones necesarias
 CREATE EXTENSION IF NOT EXISTS citus;
@@ -175,12 +155,12 @@ CREATE TABLE IF NOT EXISTS hcd.egreso (
 
 -- 10) Triggers para actualizar updated_at en tablas principales
 CREATE OR REPLACE FUNCTION hcd.trigger_set_timestamp()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_usuario_updated_at ON hcd.usuario;
 CREATE TRIGGER trg_usuario_updated_at BEFORE UPDATE ON hcd.usuario FOR EACH ROW EXECUTE FUNCTION hcd.trigger_set_timestamp();
@@ -189,7 +169,6 @@ DROP TRIGGER IF EXISTS trg_atencion_updated_at ON hcd.atencion;
 CREATE TRIGGER trg_atencion_updated_at BEFORE UPDATE ON hcd.atencion FOR EACH ROW EXECUTE FUNCTION hcd.trigger_set_timestamp();
 
 -- 11) Distribuir tablas con Citus (ejecutar en el coordinator)
--- Se recomienda ejecutar las líneas siguientes en el coordinador, una vez que los workers estén añadidos.
 SELECT create_distributed_table('hcd.usuario', 'documento_id');
 SELECT create_distributed_table('hcd.atencion', 'documento_id');
 SELECT create_distributed_table('hcd.diagnostico', 'atencion_id');

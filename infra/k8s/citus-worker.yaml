@@ -1,14 +1,29 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Service
 metadata:
   name: citus-worker
 spec:
+  clusterIP: None  # Headless service
+  selector:
+    app: citus-worker
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet  # Cambiado de Deployment a StatefulSet
+metadata:
+  name: citus-worker
+spec:
+  serviceName: citus-worker
   replicas: 2
   selector:
-    matchLabels: { app: citus-worker }
+    matchLabels:
+      app: citus-worker
   template:
     metadata:
-      labels: { app: citus-worker }
+      labels:
+        app: citus-worker
     spec:
       containers:
       - name: citus-worker
