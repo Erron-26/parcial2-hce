@@ -1,3 +1,22 @@
+# ==============================================
+# COORDINATOR CON ALMACENAMIENTO PERSISTENTE
+# ==============================================
+
+# PersistentVolumeClaim para el Coordinator
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: citus-coordinator-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+# Service del Coordinator
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,7 +27,9 @@ spec:
   ports:
   - port: 5432
     targetPort: 5432
+
 ---
+# Deployment del Coordinator CON PERSISTENCIA
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,10 +37,12 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels: { app: citus-coordinator }
+    matchLabels:
+      app: citus-coordinator
   template:
     metadata:
-      labels: { app: citus-coordinator }
+      labels:
+        app: citus-coordinator
     spec:
       containers:
       - name: citus-coordinator
@@ -27,6 +50,17 @@ spec:
         env:
         - name: POSTGRES_PASSWORD
           value: "postgres"
+        - name: POSTGRES_DB
+          value: "interop_db"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         ports:
         - containerPort: 5432
-        args: ["-c","shared_preload_libraries=citus"]
+        args: ["-c", "shared_preload_libraries=citus"]
+        volumeMounts:
+        - name: coordinator-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: coordinator-storage
+        persistentVolumeClaim:
+          claimName: citus-coordinator-pvc

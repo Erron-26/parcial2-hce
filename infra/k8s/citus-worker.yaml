@@ -1,14 +1,36 @@
-apiVersion: apps/v1
-kind: Deployment
+# ==============================================
+# WORKERS CON ALMACENAMIENTO PERSISTENTE
+# ==============================================
+
+# Service Headless para Workers
+apiVersion: v1
+kind: Service
 metadata:
   name: citus-worker
 spec:
+  clusterIP: None  # Headless service
+  selector:
+    app: citus-worker
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# StatefulSet para Workers con PVC automático
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: citus-worker
+spec:
+  serviceName: citus-worker
   replicas: 2
   selector:
-    matchLabels: { app: citus-worker }
+    matchLabels:
+      app: citus-worker
   template:
     metadata:
-      labels: { app: citus-worker }
+      labels:
+        app: citus-worker
     spec:
       containers:
       - name: citus-worker
@@ -16,6 +38,20 @@ spec:
         env:
         - name: POSTGRES_PASSWORD
           value: "postgres"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         ports:
         - containerPort: 5432
-        args: ["-c","shared_preload_libraries=citus"]
+        args: ["-c", "shared_preload_libraries=citus"]
+        volumeMounts:
+        - name: worker-storage
+          mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: worker-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 3Gi
