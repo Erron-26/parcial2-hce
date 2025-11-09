@@ -36,10 +36,10 @@ else
     echo "Minikube ya está corriendo ✓"
 fi
 
-# 2. Aplicar configuración de almacenamiento persistente
-print_step "Aplicando configuración de almacenamiento persistente..."
-kubectl apply -f citus-coordinator-persistent.yaml
-kubectl apply -f citus-worker-persistent.yaml
+# 2. Aplicar configuración de Kubernetes
+print_step "Aplicando configuración de Kubernetes..."
+kubectl apply -f infra/k8s/citus-coordinator.yaml
+kubectl apply -f infra/k8s/citus-worker.yaml
 
 # 3. Esperar a que los pods estén listos
 print_step "Esperando a que los pods estén listos (esto puede tardar 2-3 minutos)..."
@@ -50,36 +50,68 @@ echo "Todos los pods están listos ✓"
 
 # 4. Obtener nombres de pods
 COORDINATOR_POD=$(kubectl get pods -l app=citus-coordinator -o jsonpath='{.items[0].metadata.name}')
-WORKER_0=$(kubectl get pods -l app=citus-worker -o jsonpath='{.items[0].metadata.name}')
-WORKER_1=$(kubectl get pods -l app=citus-worker -o jsonpath='{.items[1].metadata.name}')
+WORKER_0="citus-worker-0"
+WORKER_1="citus-worker-1"
 
 echo "Pods detectados:"
 echo "  - Coordinator: $COORDINATOR_POD"
 echo "  - Worker 0: $WORKER_0"
 echo "  - Worker 1: $WORKER_1"
 
-# 5. Verificar si la base de datos ya existe
-print_step "Verificando si la base de datos existe..."
-DB_EXISTS=$(kubectl exec -it $COORDINATOR_POD -- psql -U postgres -lqt | cut -d \| -f 1 | grep -w interop_db | wc -l)
+# 5. Esperar a que PostgreSQL esté listo en el coordinador
+print_step "Esperando a que PostgreSQL esté listo en el coordinador..."
+RETRY_COUNT=0
+MAX_RETRIES=60  # Aumentado a 60 intentos
+
+# Verificar el estado del pod
+print_step "Verificando estado del pod coordinador..."
+kubectl describe pod $COORDINATOR_POD
+
+# Dar tiempo adicional para la inicialización
+print_step "Esperando 30 segundos para la inicialización completa..."
+sleep 30
+
+while true; do
+    if kubectl exec $COORDINATOR_POD -- pg_isready -h localhost -U postgres > /dev/null 2>&1; then
+        print_step "PostgreSQL está respondiendo..."
+        # Esperar 5 segundos más para asegurar estabilidad
+        sleep 5
+        break
+    fi
+    
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        print_error "PostgreSQL no está respondiendo después de $MAX_RETRIES intentos"
+        print_error "Últimos logs del pod:"
+        kubectl logs $COORDINATOR_POD --tail=20
+        exit 1
+    fi
+    
+    print_warning "PostgreSQL aún no está listo. Intento $RETRY_COUNT de $MAX_RETRIES. Reintentando en 5 segundos..."
+    sleep 5
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+done
+
+print_step "PostgreSQL está listo. Verificando si la base de datos existe..."
+DB_EXISTS=$(kubectl exec $COORDINATOR_POD -- psql -h localhost -U postgres -XtAc "SELECT 1 FROM pg_database WHERE datname='interop_db'" | grep -c 1)
 
 if [ "$DB_EXISTS" -eq 0 ]; then
     print_step "Creando base de datos interop_db..."
-    kubectl exec -it $COORDINATOR_POD -- psql -U postgres -c "CREATE DATABASE interop_db;"
+    kubectl exec -it $COORDINATOR_POD -- psql -h localhost -U postgres -c "CREATE DATABASE interop_db;"
     
     # 6. Copiar y ejecutar script de inicialización
     print_step "Copiando script de inicialización al pod..."
-    kubectl cp init_fixed.sql $COORDINATOR_POD:/tmp/init.sql
+    kubectl cp infra/init.sql $COORDINATOR_POD:/tmp/init.sql
     
     print_step "Ejecutando script de inicialización..."
-    kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db -f /tmp/init.sql
+    kubectl exec -it $COORDINATOR_POD -- psql -h localhost -U postgres -d interop_db -f /tmp/init.sql
     
     # 7. Configurar workers en Citus
     print_step "Agregando workers al cluster Citus..."
-    kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db -c "SELECT * from citus_add_node('$WORKER_0.citus-worker.default.svc.cluster.local', 5432);"
-    kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db -c "SELECT * from citus_add_node('$WORKER_1.citus-worker.default.svc.cluster.local', 5432);"
+    kubectl exec -it $COORDINATOR_POD -- psql -h localhost -U postgres -d interop_db -c "SELECT * from master_add_node('citus-worker-0.citus-worker.default.svc.cluster.local', 5432);"
+    kubectl exec -it $COORDINATOR_POD -- psql -h localhost -U postgres -d interop_db -c "SELECT * from master_add_node('citus-worker-1.citus-worker.default.svc.cluster.local', 5432);"
     
     print_step "Verificando workers registrados..."
-    kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db -c "SELECT * FROM citus_get_active_worker_nodes();"
+    kubectl exec -it $COORDINATOR_POD -- psql -h localhost -U postgres -d interop_db -c "SELECT * FROM master_get_active_worker_nodes();"
     
     # 8. Insertar datos de prueba
     print_step "¿Deseas insertar datos de prueba? (s/n)"
@@ -125,7 +157,7 @@ echo "Comandos útiles:"
 echo "  - Ver pods: kubectl get pods"
 echo "  - Logs coordinator: kubectl logs -f $COORDINATOR_POD"
 echo "  - Conectar al pod: kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db"
-echo "  - Ver distribución de datos: kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db -c \"SELECT * FROM citus_tables;\""
+echo "  - Ver distribución de datos: kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db -c \"SELECT logicalrelid as table_name, * FROM pg_dist_partition;\""
 echo ""
 echo "Para detener (sin perder datos):"
 echo "  minikube stop"
