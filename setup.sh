@@ -36,16 +36,27 @@ print_error() {
 INIT_SQL_LOCAL="${INIT_SQL_LOCAL:-infra/init.sql}"   # archivo SQL local que quieres copiar
 SAMPLE_SQL_LOCAL="${SAMPLE_SQL_LOCAL:-infra/load_sample_data.sql}" # archivo de datos de prueba (opcional)
 
-# 1. Verificar que Minikube está corriendo
+# 1. Verificar que Docker está corriendo
+print_step "Verificando que Docker daemon esté corriendo..."
+if ! docker info >/dev/null 2>&1; then
+    print_error "El daemon de Docker no está corriendo o no se puede acceder a él."
+    print_error "Por favor, inicia Docker y vuelve a ejecutar el script."
+    exit 1
+else
+    echo "Docker está corriendo ✓"
+fi
+
+# 2. Verificar que Minikube está corriendo
 print_step "Verificando estado de Minikube..."
 if ! minikube status >/dev/null 2>&1; then
     print_warning "Minikube no está corriendo. Iniciando..."
-    minikube start --memory=4096 --cpus=2
+    # Forzar una versión estable de Kubernetes para evitar problemas de compatibilidad
+    minikube start --memory=4096 --cpus=2 --kubernetes-version=v1.28.3
 else
     echo "Minikube ya está corriendo ✓"
 fi
 
-# 2. Aplicar configuración de Kubernetes
+# 3. Aplicar configuración de Kubernetes
 print_step "Aplicando configuración de Kubernetes..."
 kubectl apply -f infra/k8s/citus-coordinator.yaml
 kubectl apply -f infra/k8s/citus-worker.yaml
