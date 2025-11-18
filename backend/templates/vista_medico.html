@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Portal Médico{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Portal Médico</h2>
+    <a href="/dashboard" class="btn btn-secondary">Volver al Dashboard</a>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    Acceso Exclusivo para Médicos
+  </div>
+  <div class="card-body">
+    <h5 class="card-title">¡Bienvenido, Dr(a). {{ user.primer_apellido }}!</h5>
+    <p class="card-text">
+      Esta sección es exclusiva para el personal médico. Desde aquí podrá gestionar pacientes,
+      revisar historias clínicas y registrar nuevas atenciones.
+    </p>
+    <p><strong>Usuario:</strong> {{ user.correo_electronico }}</p>
+    <p><strong>Rol:</strong> {{ user.tipo_usuario }}</p>
+  </div>
+</div>
+{% endblock %}

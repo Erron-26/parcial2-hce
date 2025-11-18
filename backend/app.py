@@ -1,7 +1,9 @@
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -14,6 +16,7 @@ from .core.security import (
     create_access_token,
     get_password_hash,
     oauth2_scheme,
+    check_role,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
@@ -26,6 +29,10 @@ app = FastAPI(
     description="Middleware para la gestión de HCE con FastAPI y Citus",
     version="1.0.0",
 )
+
+# --- Configuración de Plantillas Jinja2 ---
+templates = Jinja2Templates(directory="backend/templates")
+
 
 # Dependency to get a DB session
 def get_db():
@@ -71,12 +78,36 @@ async def get_current_user(
 
 # --- Endpoints ---
 
-@app.get("/", tags=["Health Check"])
+@app.get("/", response_class=RedirectResponse, include_in_schema=False)
 def read_root():
     """
-    Endpoint de verificación para confirmar que la API está funcionando.
+    Redirige a la página de login.
     """
-    return {"status": "API funcionando correctamente"}
+    return RedirectResponse(url="/login")
+
+
+@app.get("/dashboard", response_class=HTMLResponse, tags=["Frontend"])
+async def dashboard_page(request: Request):
+    """
+    Sirve la página principal del dashboard.
+    La lógica dentro de la plantilla se encarga de verificar el token.
+    """
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/login", response_class=HTMLResponse, tags=["Frontend"])
+async def login_page(request: Request):
+    """
+    Sirve la página de inicio de sesión.
+    """
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/medico", response_class=HTMLResponse, tags=["Frontend Roles"])
+async def medico_page(request: Request, current_user: models.Usuario = Depends(check_role("medico"))):
+    """
+    Sirve la página específica para el rol de médico.
+    Protegida por token y rol.
+    """
+    return templates.TemplateResponse("vista_medico.html", {"request": request, "user": current_user})
 
 @app.post("/token", response_model=schemas.Token, tags=["Autenticación"])
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -98,7 +129,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.correo_electronico}, expires_delta=access_token_expires
+        data={"sub": user.correo_electronico, "role": user.tipo_usuario}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

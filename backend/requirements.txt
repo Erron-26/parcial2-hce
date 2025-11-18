@@ -8,3 +8,5 @@ python-dotenv
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+Jinja2
+WeasyPrint

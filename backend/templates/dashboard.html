@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Bienvenido</h3>
+      </div>
+      <div class="card-body">
+        <p>Has iniciado sesión correctamente en el sistema de HCE.</p>
+        <ul>
+          <li><strong>Usuario:</strong> <span id="user-email">Cargando...</span></li>
+          <li><strong>Rol:</strong> <span id="user-role">Cargando...</span></li>
+        </ul>
+        
+        <hr>
+        <h5>Acciones Disponibles</h5>
+        <div id="role-menu">
+          <!-- El contenido se generará dinámicamente -->
+        </div>
+
+        <button id="logout-button" class="btn btn-danger mt-4">Cerrar Sesión</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const token = localStorage.getItem("hce_access_token");
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      
+      document.getElementById("user-email").textContent = payload.sub || "No encontrado";
+      const userRole = payload.role || "No asignado";
+      document.getElementById("user-role").textContent = userRole;
+
+      // --- Menú dinámico basado en el rol ---
+      const menu = document.getElementById("role-menu");
+      let menuHTML = '<p>No hay acciones disponibles para tu rol.</p>';
+
+      if (userRole === 'medico') {
+        menuHTML = `
+          <div class="list-group">
+            <a href="/medico" class="list-group-item list-group-item-action">
+              Acceder al Portal Médico
+            </a>
+            <a href="#" class="list-group-item list-group-item-action disabled">(Próximamente) Buscar Paciente</a>
+          </div>
+        `;
+      } else if (userRole === 'paciente') {
+        menuHTML = `
+          <div class="list-group">
+            <a href="#" class="list-group-item list-group-item-action disabled">(Próximamente) Ver mi Historia Clínica</a>
+            <a href="#" class="list-group-item list-group-item-action disabled">(Próximamente) Descargar mi HCE en PDF</a>
+          </div>
+        `;
+      }
+      menu.innerHTML = menuHTML;
+
+    } catch (e) {
+      console.error("Error al decodificar el token:", e);
+      localStorage.removeItem("hce_access_token");
+      window.location.href = "/login";
+    }
+
+    document.getElementById("logout-button").addEventListener("click", function() {
+      localStorage.removeItem("hce_access_token");
+      window.location.href = "/login";
+    });
+  });
+</script>
+{% endblock %}
