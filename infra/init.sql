@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS hcd.usuario (
   telefono VARCHAR(50),
   celular VARCHAR(50),
   correo_electronico VARCHAR(255),
+  hashed_password VARCHAR(255) NOT NULL,
   ocupacion VARCHAR(150),
   entidad_afiliacion VARCHAR(255),
   regimen_afiliacion VARCHAR(80),

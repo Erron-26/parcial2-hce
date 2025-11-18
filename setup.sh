@@ -203,7 +203,7 @@ if [ -f "$INIT_SQL_LOCAL" ]; then
     kubectl cp "$INIT_SQL_LOCAL" "$COORDINATOR_POD":/tmp/init.sql
     
     # Usamos -v ON_ERROR_STOP=1 para que el script falle si hay cualquier error en el SQL
-    kubectl exec "$COORDINATOR_POD" -- psql -v ON_ERROR_STOP=1 -U postgres -d interop_db -f /tmp/init.sql \
+    kubectl exec "$COORDINATOR_POD" -- bash -c "export PGPASSWORD=postgres && psql -v ON_ERROR_STOP=1 -U postgres -d interop_db -f /tmp/init.sql" \
         || { print_error "Falló la ejecución de /tmp/init.sql. El script se detendrá."; kubectl logs "$COORDINATOR_POD" --tail=120 || true; exit 1; }
     
     print_step "Script de inicialización aplicado ✓"
@@ -217,9 +217,9 @@ print_step "Asegurando que la base de datos y extensiones existen en los workers
 for WPOD in "${WORKER_PODS[@]}"; do
     echo "Verificando worker $WPOD..."
     # Crear base de datos (ignorar error si ya existe)
-    kubectl exec "$WPOD" -- psql -U postgres -d postgres -c "CREATE DATABASE interop_db;" >/dev/null 2>&1 || true
+    PGPASSWORD=postgres kubectl exec "$WPOD" -- psql -U postgres -d postgres -c "CREATE DATABASE interop_db;" >/dev/null 2>&1 || true
     # Crear extensiones (ignorar error si ya existen)
-    kubectl exec "$WPOD" -- psql -U postgres -d interop_db -c "CREATE EXTENSION IF NOT EXISTS citus;" >/dev/null 2>&1 || true
+    PGPASSWORD=postgres kubectl exec "$WPOD" -- psql -U postgres -d interop_db -c "CREATE EXTENSION IF NOT EXISTS citus;" >/dev/null 2>&1 || true
     echo "Worker $WPOD verificado ✓"
 done
 
@@ -236,7 +236,7 @@ if [ "$WORKERS_COUNT" -eq 0 ] && [ "${#WORKER_PODS[@]}" -gt 0 ]; then
         WORKER_DNS="citus-worker-${i}.citus-worker.default.svc.cluster.local"
         print_step "Añadiendo worker $WORKER_DNS:5432 al coordinator..."
         
-        RESULT=$(kubectl exec "$COORDINATOR_POD" -- psql -U postgres -d interop_db -c "SELECT master_add_node('$WORKER_DNS', 5432);" 2>&1)
+        RESULT=$(PGPASSWORD=postgres kubectl exec "$COORDINATOR_POD" -- psql -U postgres -d interop_db -c "SELECT master_add_node('$WORKER_DNS', 5432);" 2>&1)
         
         if echo "$RESULT" | grep -q "ERROR"; then
             print_error "Error al añadir worker $WORKER_DNS: $RESULT"
