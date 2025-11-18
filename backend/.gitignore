@@ -1,0 +1,43 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing
+.pytest_cache/
+
+# Environment variables and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Database / local data
+*.sqlite
+*.db
+*.log
+
+# Coverage
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+
+# C extensions / compiled artifacts
+*.so
