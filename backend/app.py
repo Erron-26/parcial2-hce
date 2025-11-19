@@ -24,13 +24,24 @@ from .core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
 
-Base.metadata.create_all(bind=engine)
+# Nota: Base.metadata.create_all() se ejecuta a través del script init.sql en setup.sh
+# No lo hacemos aquí para evitar bloquear el startup de FastAPI si la BD no está lista
 
 app = FastAPI(
     title="API para Sistema de Historias Clínicas Electrónicas",
     description="Middleware para la gestión de HCE con FastAPI y Citus",
     version="1.0.0",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Intenta crear tablas si no existen (fallback si init.sql no se ejecutó)."""
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        # Si falla (BD no disponible), continuamos. Las tablas deben existir desde init.sql
+        print(f"[ADVERTENCIA] No se pudieron crear tablas en startup: {e}")
+        print("[ADVERTENCIA] Asegúrate de que init.sql se ejecutó en el coordinador de Citus")
 
 templates = Jinja2Templates(directory="backend/templates")
 
@@ -203,6 +214,7 @@ async def admisionista_page(request: Request, current_user: Any = Depends(check_
 
 @app.get("/exportar_pdf/{documento_id}", tags=["PDF"], response_class=StreamingResponse)
 async def exportar_historia_pdf(
+    request: Request,  # <--- 1. ESTO ES LO QUE TE FALTA (Define la variable)
     documento_id: int,
     db: Session = Depends(get_db),
     current_user: Any = Depends(check_role("medico"))
@@ -222,9 +234,31 @@ async def exportar_historia_pdf(
         else:
             atencion.profesional_responsable_nombre = "No especificado"
 
+    # Renderizar HTML
     html_content = templates.TemplateResponse(
         "pdf_template.html", 
-        {"request": Request, "paciente": paciente, "atenciones": atenciones}
+        {
+            "request": request,  # <--- 2. Aquí se usa la variable definida arriba
+            "paciente": paciente, 
+            "atenciones": atenciones
+        }
+    ).body.decode("utf-8")
+
+    # Generar PDF con WeasyPrint
+    pdf_buffer = BytesIO()
+    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+
+    filename = f"historia_clinica_{paciente.documento_id}.pdf"
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+    html_content = templates.TemplateResponse(
+        "pdf_template.html", 
+        {"request": request, "paciente": paciente, "atenciones": atenciones}
     ).body.decode("utf-8")
 
     pdf_buffer = BytesIO()
@@ -240,13 +274,21 @@ async def exportar_historia_pdf(
 
 @app.post("/token", tags=["Autenticación"])
 async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
+    try:
+        user = authenticate_user(db, form_data.username, form_data.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email o contraseña incorrectos",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email o contraseña incorrectos",
+            detail=f"Error de autenticación: {e}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.correo_electronico, "role": user.tipo_usuario}, expires_delta=access_token_expires

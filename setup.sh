@@ -56,21 +56,33 @@ else
     echo "Minikube ya está corriendo ✓"
 fi
 
-# 3. Aplicar configuración de Kubernetes
-print_step "Aplicando configuración de Kubernetes..."
+# 3. Construir y cargar imagen de la app FastAPI
+print_step "Construyendo la imagen Docker 'middleware-citus:1.0'..."
+# Apuntar el shell local al entorno de Docker de Minikube
+eval $(minikube -p minikube docker-env --shell bash)
+# Construir la imagen. El 'contexto' es el directorio raíz del proyecto.
+docker build -t middleware-citus:1.0 -f backend/Dockerfile .
+print_step "Imagen construida y disponible en Minikube ✓"
+
+
+# 4. Aplicar configuración de Kubernetes
+print_step "Aplicando configuración de Kubernetes (Citus y FastAPI)..."
 kubectl apply -f infra/k8s/citus-coordinator.yaml
 kubectl apply -f infra/k8s/citus-worker.yaml
+kubectl apply -f infra/k8s/fastapi-deployment.yaml
+kubectl apply -f infra/k8s/fastapi-service.yaml
 
-# 3. Dar tiempo para que Kubernetes cree los recursos
+# 5. Dar tiempo para que Kubernetes cree los recursos
 print_step "Esperando a que Kubernetes cree los recursos..."
 sleep 6
 
-# 4. Esperar a que los pods estén listos
+# 6. Esperar a que los pods estén listos
 print_step "Esperando a que los pods estén listos (esto puede tardar 2-3 minutos)..."
 
 echo "Verificando que los pods se están creando..."
 kubectl get pods -l app=citus-coordinator -o wide || echo "Aún no hay pods del coordinator"
 kubectl get pods -l app=citus-worker -o wide || echo "Aún no hay pods de workers"
+kubectl get pods -l app=fastapi-app -o wide || echo "Aún no hay pods de la app FastAPI"
 
 echo ""
 echo "Esperando a que los pods estén en estado Ready..."
@@ -92,18 +104,26 @@ fi
 
 # Esperar workers
 if ! kubectl wait --for=condition=ready pod -l app=citus-worker --timeout=300s >/dev/null 2>&1; then
-    print_error "Timeout esperando a los workers. Verificando estado..."
-    echo "Estado actual de los pods (workers):"
-    kubectl get pods -l app=citus-worker
-    echo ""
-    echo "Logs de los workers (últimos 30 lineas):"
-    kubectl logs -l app=citus-worker --tail=30 || true
-    # no abortamos: en algunos casos los workers tardan o algunos pods no son necesarios
+    print_warning "Timeout esperando a los workers. Se continuará, pero puede que no funcionen."
 fi
 
-echo "Todos los pods Ready (o ya visibles) ✓"
+# Esperar la app FastAPI
+if ! kubectl wait --for=condition=ready pod -l app=fastapi-app --timeout=300s >/dev/null 2>&1; then
+    print_error "Timeout esperando a la app FastAPI. Verificando estado..."
+    echo "Estado actual de los pods (fastapi-app):"
+    kubectl get pods -l app=fastapi-app
+    echo ""
+    echo "Logs de la app FastAPI:"
+    FASTAPI_POD=$(kubectl get pods -l app=fastapi-app -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+    if [ -n "$FASTAPI_POD" ]; then
+        kubectl logs "$FASTAPI_POD" --tail=80 || true
+    fi
+    exit 1
+fi
 
-# 5. Obtener nombre real del pod coordinator y worker pods dinámicos
+echo "Todos los pods principales están Ready ✓"
+
+# 7. Obtener nombre real del pod coordinator y worker pods dinámicos
 COORDINATOR_POD=$(kubectl get pods -l app=citus-coordinator -o jsonpath='{.items[0].metadata.name}')
 if [ -z "$COORDINATOR_POD" ]; then
     print_error "No se detectó pod coordinador. Abortando."
@@ -124,6 +144,7 @@ if [ "${#WORKER_PODS[@]}" -gt 0 ]; then
     echo "  - Worker: $w"
   done
 fi
+echo "  - FastAPI App: $(kubectl get pods -l app=fastapi-app -o jsonpath='{.items[0].metadata.name}')"
 
 # 6. Esperar a que PostgreSQL esté listo en el coordinador (pg_isready o psql)
 print_step "Esperando a que PostgreSQL esté listo en el coordinador..."
@@ -314,11 +335,19 @@ if [ -f "$SAMPLE_SQL_LOCAL" ]; then
     USER_COUNT=$(printf "%s" "$USER_COUNT_RAW" | tr -d '[:space:]' || echo "0")
 
     if [ "$USER_COUNT" -eq 0 ]; then
-        read -p "Se encontró $SAMPLE_SQL_LOCAL. ¿Deseas insertar datos de prueba? (s/N): " INSERT_DATA
+        read -p "Se encontró '$SAMPLE_SQL_LOCAL'. ¿Deseas insertar datos de prueba? (s/N): " INSERT_DATA
         if [[ "$INSERT_DATA" =~ ^[sS](i)?$ ]]; then
             print_step "Copiando y ejecutando script de datos de prueba..."
             kubectl cp "$SAMPLE_SQL_LOCAL" "$COORDINATOR_POD":/tmp/load_sample_data.sql
-            kubectl exec "$COORDINATOR_POD" -- psql -U postgres -d interop_db -f /tmp/load_sample_data.sql || print_warning "La inserción de datos de prueba falló."
+            
+            # Ejecutar con manejo de errores mejorado
+            if ! kubectl exec "$COORDINATOR_POD" -- psql -v ON_ERROR_STOP=1 -U postgres -d interop_db -f /tmp/load_sample_data.sql; then
+                print_error "Falló la inserción de datos de prueba desde '$SAMPLE_SQL_LOCAL'."
+                print_error "Revisa el archivo SQL en busca de errores o violaciones de constraints."
+                print_warning "El script continuará, pero la base de datos estará vacía."
+            else
+                print_step "Datos de prueba insertados correctamente. ✓"
+            fi
         else
             print_step "Omitiendo carga de datos de prueba."
         fi
@@ -326,64 +355,53 @@ if [ -f "$SAMPLE_SQL_LOCAL" ]; then
         print_step "Ya existen datos en la tabla 'hcd.usuario', omitiendo inserción de datos de prueba."
     fi
 else
-    print_step "No se encontró $SAMPLE_SQL_LOCAL; omitiendo carga de ejemplo."
+    print_warning "No se encontró '$SAMPLE_SQL_LOCAL'; se omite la carga de datos de prueba."
 fi
 
-# 13. Obtener información de conexión
-print_step "Obteniendo información de conexión..."
-NODE_PORT=$(kubectl get svc citus-coordinator -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "N/A")
-MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "N/A")
+# 13. Generar archivo .env automáticamente
+print_step "Generando archivo de entorno 'backend/.env'..."
+DB_NODE_PORT=$(kubectl get svc citus-coordinator -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "N/A")
+MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
+
+if [ "$DB_NODE_PORT" = "N/A" ] || [ "$MINIKUBE_IP" = "127.0.0.1" ]; then
+    print_error "No se pudo obtener la IP de Minikube o el puerto del servicio de la base de datos."
+    print_error "No se pudo generar el .env. Revisa la configuración de Minikube."
+    exit 1
+fi
+
+# Crear el archivo .env
+cat > backend/.env << EOF
+# Este archivo es generado automáticamente por setup.sh
+DB_HOST=${MINIKUBE_IP}
+DB_PORT=${DB_NODE_PORT}
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=interop_db
+SECRET_KEY=super-secret-key-for-development
+EOF
+
+print_step "Archivo 'backend/.env' generado exitosamente. ✓"
+
+
+# 14. Obtener información de conexión de la App
+print_step "Obteniendo información de conexión de la aplicación..."
+APP_NODE_PORT=$(kubectl get svc fastapi-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "N/A")
 
 echo ""
 echo "=========================================="
 echo "  ✓ CONFIGURACIÓN COMPLETADA"
 echo "=========================================="
 echo ""
-
-# 14. Verificación final - distribución de tablas
-print_step "Verificando distribución de tablas en Citus (pg_dist_partition / pg_dist_shard)..."
-DIST_RESULT=$(kubectl exec "$COORDINATOR_POD" -- psql -U postgres -d interop_db -c \
-    "SELECT logicalrelid::text AS tabla, COALESCE(partmethod::text, '') AS metodo, partkey AS columna_distribucion FROM pg_dist_partition WHERE logicalrelid::text LIKE 'hcd.%' ORDER BY logicalrelid;" 2>/dev/null || echo "")
-
-if [ -z "$DIST_RESULT" ] || echo "$DIST_RESULT" | grep -q "(0 rows)"; then
-    print_warning "No hay tablas distribuidas aún. Verifica que los workers estén registrados."
-else
-    echo "$DIST_RESULT"
-fi
-
-echo ""
-print_step "Verificando cantidad de shards por tabla..."
-SHARD_RESULT=$(kubectl exec "$COORDINATOR_POD" -- psql -U postgres -d interop_db -c \
-    "SELECT logicalrelid::text AS tabla, COUNT(*) AS num_shards FROM pg_dist_shard WHERE logicalrelid::text LIKE 'hcd.%' GROUP BY logicalrelid ORDER BY logicalrelid;" 2>/dev/null || echo "")
-
-if [ -z "$SHARD_RESULT" ] || echo "$SHARD_RESULT" | grep -q "(0 rows)"; then
-    print_warning "No hay shards creados aún."
-else
-    echo "$SHARD_RESULT"
-fi
-
-echo ""
-echo "Información de conexión:"
+echo "Información de la Base de Datos (para psql):"
 echo "  Host: $MINIKUBE_IP"
-echo "  Port: $NODE_PORT"
-echo "  Database: interop_db"
-echo "  User: postgres"
-echo "  Password: postgres"
+echo "  Port: $DB_NODE_PORT"
 echo ""
-echo "Conectar desde tu máquina local (si NodePort expuesto):"
-echo "  psql -h $MINIKUBE_IP -p $NODE_PORT -U postgres -d interop_db"
+echo "Información de la Aplicación FastAPI:"
+echo "  URL: http://$MINIKUBE_IP:$APP_NODE_PORT"
 echo ""
-echo "Comandos útiles:"
-echo "  - Ver pods: kubectl get pods"
-echo "  - Logs coordinator: kubectl logs -f $COORDINATOR_POD"
-echo "  - Shell en coordinator: kubectl exec -it $COORDINATOR_POD -- bash"
-echo "  - Conectar a BD: kubectl exec -it $COORDINATOR_POD -- psql -U postgres -d interop_db"
-echo ""
-echo "Para detener (sin perder datos):"
-echo "  minikube stop"
-echo ""
-echo "Para reiniciar:"
-echo "  minikube start"
-echo "  ./setup.sh"
+echo "Próximos pasos:"
+echo "  - Activa el entorno virtual: source backend/.venv/bin/activate.fish"
+echo "  - Crea los usuarios: python3 backend/scripts/create_test_user.py (y los otros)"
+echo "  - ¡Prueba la aplicación en la URL de arriba!"
 echo ""
 echo "=========================================="

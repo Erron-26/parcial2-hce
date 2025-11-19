@@ -10,3 +10,4 @@ passlib[bcrypt]
 python-multipart
 Jinja2
 WeasyPrint
+argon2-cffi

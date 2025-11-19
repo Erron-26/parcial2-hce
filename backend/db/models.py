@@ -7,6 +7,7 @@ from sqlalchemy import (
     Text,
     TIMESTAMP,
     ForeignKey,
+    ForeignKeyConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
@@ -124,11 +125,14 @@ class Atencion(Base):
 
 class Diagnostico(Base):
     __tablename__ = "diagnostico"
-    __table_args__ = {"schema": "hcd"}
+    __table_args__ = (
+        ForeignKeyConstraint(['documento_id', 'atencion_id'], ['hcd.atencion.documento_id', 'hcd.atencion.atencion_id']),
+        {"schema": "hcd"}
+    )
 
-    atencion_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    documento_id = Column(BigInteger, ForeignKey("hcd.atencion.documento_id"), nullable=False)
-    atencion_id_fk = Column(UUID(as_uuid=True), ForeignKey("hcd.atencion.atencion_id"), nullable=False)
+    diagnostico_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    documento_id = Column(BigInteger, primary_key=True)
+    atencion_id = Column(UUID(as_uuid=True), nullable=False)
     tipo_diagnostico = Column(String(80))
     diagnostico_text = Column(Text)
     codigo_cie10 = Column(String(30))
@@ -136,43 +140,41 @@ class Diagnostico(Base):
     registro_medico = Column(JSONB)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
-    # atencion = relationship("Atencion", back_populates="diagnosticos")
-
-
 class TecnologiaSalud(Base):
     __tablename__ = "tecnologia_salud"
-    __table_args__ = {"schema": "hcd"}
+    __table_args__ = (
+        ForeignKeyConstraint(['documento_id', 'atencion_id'], ['hcd.atencion.documento_id', 'hcd.atencion.atencion_id']),
+        ForeignKeyConstraint(['id_personal_salud'], ['hcd.profesional_salud.id_personal_salud']),
+        {"schema": "hcd"}
+    )
 
     tecnologia_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    documento_id = Column(BigInteger, ForeignKey("hcd.atencion.documento_id"), nullable=False)
-    atencion_id = Column(UUID(as_uuid=True), ForeignKey("hcd.atencion.atencion_id"), nullable=False)
+    documento_id = Column(BigInteger, primary_key=True)
+    atencion_id = Column(UUID(as_uuid=True), nullable=False)
     descripcion_medicamento = Column(Text)
     dosis = Column(String(80))
     via_administracion = Column(String(80))
     frecuencia = Column(String(80))
     dias_tratamiento = Column(Integer)
     unidades_aplicadas = Column(Integer, default=0)
-    id_personal_salud = Column(
-        UUID(as_uuid=True), ForeignKey("hcd.profesional_salud.id_personal_salud")
-    )
+    id_personal_salud = Column(UUID(as_uuid=True))
     finalidad_tecnologia = Column(Text)
     registro_administracion = Column(JSONB)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
-    # atencion = relationship("Atencion", back_populates="tecnologias_salud")
-
-
 class Egreso(Base):
     __tablename__ = "egreso"
-    __table_args__ = {"schema": "hcd"}
+    __table_args__ = (
+        ForeignKeyConstraint(['documento_id', 'atencion_id'], ['hcd.atencion.documento_id', 'hcd.atencion.atencion_id']),
+        {"schema": "hcd"}
+    )
 
     egreso_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    documento_id = Column(BigInteger, ForeignKey("hcd.atencion.documento_id"), nullable=False)
-    atencion_id = Column(UUID(as_uuid=True), ForeignKey("hcd.atencion.atencion_id"), nullable=False)
+    documento_id = Column(BigInteger, primary_key=True)
+    atencion_id = Column(UUID(as_uuid=True), nullable=False)
     estado_egreso = Column(String(80))
     causas_egreso = Column(Text)
     recomendaciones_al_egreso = Column(Text)
     fecha_egreso = Column(TIMESTAMP(timezone=True))
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
-    # atencion = relationship("Atencion", back_populates="egreso")

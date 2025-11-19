@@ -27,83 +27,83 @@ INSERT INTO hcd.usuario (documento_id, tipo_documento, primer_apellido, segundo_
                         ocupacion, entidad_afiliacion, regimen_afiliacion, tipo_usuario, hashed_password) VALUES
 (1001001001, 'CC', 'García', 'Rodríguez', 'Juan', 'Carlos', '1985-03-15', 39, 'M', 'Masculino', 'O', '+', 'Casado', 
  'Cra 15 #23-45', 'Sincelejo', 'Sucre', '2821234', '3001234567', 'jgarcia@email.com', 
- 'Ingeniero', 'NUEVA EPS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Ingeniero', 'NUEVA EPS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001002, 'CC', 'Martínez', 'López', 'María', 'Fernanda', '1992-07-22', 32, 'F', 'Femenino', 'A', '+', 'Soltera', 
  'Calle 18 #12-34', 'Sincelejo', 'Sucre', '2825678', '3109876543', 'mmartinez@email.com', 
- 'Docente', 'SANITAS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Docente', 'SANITAS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001003, 'CC', 'Pérez', 'Gómez', 'Carlos', 'Alberto', '1978-11-08', 46, 'M', 'Masculino', 'B', '+', 'Casado', 
  'Calle 25 #8-90', 'Sincelejo', 'Sucre', '2823456', '3201234567', 'cperez@email.com', 
- 'Comerciante', 'SALUD TOTAL', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Comerciante', 'SALUD TOTAL', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001004, 'CC', 'Rodríguez', 'Castro', 'Ana', 'María', '1995-05-30', 29, 'F', 'Femenino', 'AB', '+', 'Unión Libre', 
  'Cra 20 #15-67', 'Sincelejo', 'Sucre', '2829876', '3156789012', 'arodriguez@email.com', 
- 'Enfermera', 'SURA', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Enfermera', 'SURA', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001005, 'CC', 'Hernández', 'Díaz', 'Luis', 'Eduardo', '1965-09-12', 59, 'M', 'Masculino', 'O', '-', 'Casado', 
  'Calle 30 #22-11', 'Sincelejo', 'Sucre', '2827890', '3008765432', 'lhernandez@email.com', 
- 'Pensionado', 'ALIANSALUD', 'Subsidiado', 'Beneficiario', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Pensionado', 'ALIANSALUD', 'Subsidiado', 'Beneficiario', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001006, 'TI', 'González', 'Torres', 'Sofía', 'Valentina', '2010-02-14', 14, 'F', 'Femenino', 'A', '+', 'Soltero', 
  'Cra 12 #18-45', 'Sincelejo', 'Sucre', '2824567', '3187654321', 'sgonzalez@email.com', 
- 'Estudiante', 'COOSALUD', 'Subsidiado', 'Beneficiario', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Estudiante', 'COOSALUD', 'Subsidiado', 'Beneficiario', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001007, 'CC', 'Ramírez', 'Vargas', 'Diego', 'Fernando', '1988-12-03', 36, 'M', 'Masculino', 'B', '-', 'Divorciado', 
  'Calle 40 #9-23', 'Sincelejo', 'Sucre', '2826543', '3012345678', 'dramirez@email.com', 
- 'Abogado', 'COMPENSAR', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Abogado', 'COMPENSAR', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001008, 'CC', 'López', 'Sánchez', 'Carolina', NULL, '1990-08-19', 34, 'F', 'Femenino', 'O', '+', 'Casada', 
  'Cra 8 #14-56', 'Sincelejo', 'Sucre', '2822345', '3198765432', 'clopez@email.com', 
- 'Contadora', 'FAMISANAR', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Contadora', 'FAMISANAR', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001009, 'CC', 'Morales', 'Reyes', 'Pedro', 'José', '1972-04-25', 52, 'M', 'Masculino', 'A', '-', 'Viudo', 
  'Calle 35 #20-12', 'Sincelejo', 'Sucre', '2828901', '3006543210', 'pmorales@email.com', 
- 'Agricultor', 'MUTUAL SER', 'Subsidiado', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Agricultor', 'MUTUAL SER', 'Subsidiado', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001010, 'CC', 'Castro', 'Mendoza', 'Laura', 'Isabel', '1998-06-17', 26, 'F', 'Femenino', 'AB', '-', 'Soltera', 
  'Cra 5 #11-78', 'Sincelejo', 'Sucre', '2825432', '3171234567', 'lcastro@email.com', 
- 'Psicóloga', 'SANITAS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Psicóloga', 'SANITAS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001011, 'CC', 'Torres', 'Gutiérrez', 'Roberto', 'Antonio', '1982-01-28', 42, 'M', 'Masculino', 'O', '+', 'Casado', 
  'Calle 22 #16-34', 'Sincelejo', 'Sucre', '2823210', '3009876543', 'rtorres@email.com', 
- 'Mecánico', 'NUEVA EPS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Mecánico', 'NUEVA EPS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001012, 'CC', 'Ruiz', 'Pardo', 'Claudia', 'Patricia', '1987-10-11', 37, 'F', 'Femenino', 'B', '+', 'Unión Libre', 
  'Cra 18 #25-67', 'Sincelejo', 'Sucre', '2827654', '3134567890', 'cruiz@email.com', 
- 'Fisioterapeuta', 'SURA', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Fisioterapeuta', 'SURA', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001013, 'CC', 'Jiménez', 'Rojas', 'Andrés', 'Felipe', '1993-03-07', 31, 'M', 'Masculino', 'A', '+', 'Soltero', 
  'Calle 28 #19-23', 'Sincelejo', 'Sucre', '2824321', '3201234567', 'ajimenez@email.com', 
- 'Programador', 'SALUD TOTAL', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Programador', 'SALUD TOTAL', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001014, 'CC', 'Vargas', 'Herrera', 'Paola', 'Andrea', '1991-11-29', 33, 'F', 'Femenino', 'O', '-', 'Casada', 
  'Cra 10 #13-45', 'Sincelejo', 'Sucre', '2826789', '3189876543', 'pvargas@email.com', 
- 'Arquitecta', 'COMPENSAR', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Arquitecta', 'COMPENSAR', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001015, 'CC', 'Medina', 'Cruz', 'Jorge', 'Luis', '1969-07-04', 55, 'M', 'Masculino', 'B', '-', 'Casado', 
  'Calle 33 #21-90', 'Sincelejo', 'Sucre', '2829012', '3007654321', 'jmedina@email.com', 
- 'Conductor', 'ALIANSALUD', 'Subsidiado', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Conductor', 'ALIANSALUD', 'Subsidiado', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001016, 'CC', 'Salazar', 'Ortiz', 'Valentina', NULL, '2000-09-15', 24, 'F', 'Femenino', 'AB', '+', 'Soltera', 
  'Cra 7 #17-12', 'Sincelejo', 'Sucre', '2825678', '3156789012', 'vsalazar@email.com', 
- 'Diseñadora Gráfica', 'NUEVA EPS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Diseñadora Gráfica', 'NUEVA EPS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001017, 'CC', 'Navarro', 'Parra', 'Miguel', 'Ángel', '1975-05-20', 49, 'M', 'Masculino', 'A', '+', 'Divorciado', 
  'Calle 45 #24-56', 'Sincelejo', 'Sucre', '2828765', '3012345678', 'mnavarro@email.com', 
- 'Chef', 'SANITAS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Chef', 'SANITAS', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001018, 'CC', 'Ríos', 'Moreno', 'Luz', 'Marina', '1984-12-08', 40, 'F', 'Femenino', 'O', '+', 'Casada', 
  'Cra 16 #28-34', 'Sincelejo', 'Sucre', '2822109', '3198765432', 'lrios@email.com', 
- 'Odontóloga', 'SURA', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Odontóloga', 'SURA', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001019, 'CC', 'Carrillo', 'Silva', 'Javier', 'Enrique', '1996-04-12', 28, 'M', 'Masculino', 'B', '+', 'Soltero', 
  'Calle 19 #10-78', 'Sincelejo', 'Sucre', '2827890', '3171234567', 'jcarrillo@email.com', 
- 'Electricista', 'COOSALUD', 'Subsidiado', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg'),
+ 'Electricista', 'COOSALUD', 'Subsidiado', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI'),
 
 (1001001020, 'CC', 'Duarte', 'Aguilar', 'Sandra', 'Milena', '1989-08-23', 35, 'F', 'Femenino', 'A', '-', 'Unión Libre', 
  'Cra 22 #12-90', 'Sincelejo', 'Sucre', '2824567', '3009876543', 'sduarte@email.com', 
- 'Veterinaria', 'SALUD TOTAL', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$Y2hhbmdlbWVuZQ$B7b5z2h4f3z2Y3Y3Z2h4Zg')
+ 'Veterinaria', 'SALUD TOTAL', 'Contributivo', 'Cotizante', '$argon2id$v=19$m=65536,t=3,p=4$f2+NMaYUAoAwRujd29v7fw$tjXZRNcGOT+tf7pahnfnEvDbaIF9V+ep2lNhD4AZjcI')
 ON CONFLICT (documento_id) DO NOTHING;
 
 -- ============================================
