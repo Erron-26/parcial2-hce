@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historia Clínica - {{ paciente.primer_nombre }} {{ paciente.primer_apellido }}</title>
+    <style>
+        body { font-family: 'DejaVu Sans', sans-serif; margin: 2cm; font-size: 10pt; }
+        h1, h2, h3 { color: #2c3e50; }
+        h1 { text-align: center; margin-bottom: 1cm; }
+        h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 1.5cm; }
+        h3 { margin-top: 1cm; color: #34495e; }
+        .section { margin-bottom: 1cm; }
+        .data-item { margin-bottom: 5px; }
+        .data-item label { font-weight: bold; margin-right: 5px; color: #555; }
+        .attention-item { border: 1px solid #eee; padding: 10px; margin-bottom: 15px; border-radius: 5px; background-color: #fdfdfd; }
+        .attention-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 11pt; }
+        .attention-header strong { color: #2c3e50; }
+        .attention-details { margin-left: 10px; }
+        .page-break { page-break-before: always; }
+        /* Fuentes para compatibilidad con WeasyPrint y caracteres especiales */
+        @font-face {
+            font-family: 'DejaVu Sans';
+            src: url('https://fonts.cdnfonts.com/s/17586/DejaVuSans.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'DejaVu Sans';
+            src: url('https://fonts.cdnfonts.com/s/17586/DejaVuSans-Bold.woff') format('woff');
+            font-weight: bold;
+            font-style: normal;
+        }
+    </style>
+</head>
+<body>
+    <h1>Historia Clínica Electrónica</h1>
+
+    <div class="section">
+        <h2>Datos del Paciente</h2>
+        <div class="data-item"><label>Nombre Completo:</label> {{ paciente.primer_nombre }} {{ paciente.segundo_nombre if paciente.segundo_nombre }} {{ paciente.primer_apellido }} {{ paciente.segundo_apellido if paciente.segundo_apellido }}</div>
+        <div class="data-item"><label>Identificación:</label> {{ paciente.tipo_documento }} {{ paciente.documento_id }}</div>
+        <div class="data-item"><label>Fecha de Nacimiento:</label> {{ paciente.fecha_nacimiento }} (Edad: {{ paciente.edad }})</div>
+        <div class="data-item"><label>Género:</label> {{ paciente.genero }} (Sexo: {{ paciente.sexo }})</div>
+        <div class="data-item"><label>Grupo Sanguíneo/RH:</label> {{ paciente.grupo_sanguineo }}{{ paciente.factor_rh }}</div>
+        <div class="data-item"><label>Contacto:</label> {{ paciente.celular }} / {{ paciente.correo_electronico }}</div>
+        <div class="data-item"><label>Dirección:</label> {{ paciente.direccion_residencia }}, {{ paciente.municipio_ciudad }}, {{ paciente.departamento }}</div>
+        <div class="data-item"><label>Afiliación:</label> {{ paciente.entidad_afiliacion }} (Régimen: {{ paciente.regimen_afiliacion }})</div>
+    </div>
+
+    <div class="section">
+        <h2>Historial de Atenciones</h2>
+        {% if atenciones %}
+            {% for atencion in atenciones %}
+                <div class="attention-item">
+                    <div class="attention-header">
+                        <strong>Atención ID: {{ atencion.atencion_id }}</strong>
+                        <span>Fecha: {{ atencion.fecha_hora_atencion.strftime('%Y-%m-%d %H:%M') }}</span>
+                    </div>
+                    <div class="attention-details">
+                        <div class="data-item"><label>Tipo:</label> {{ atencion.tipo_atencion }}</div>
+                        <div class="data-item"><label>Motivo de Consulta:</label> {{ atencion.motivo_consulta }}</div>
+                        <div class="data-item"><label>Impresión Diagnóstica:</label> {{ atencion.impresion_diagnostica }}</div>
+                        <div class="data-item"><label>CIE10:</label> {{ atencion.codigos_cie10 | join(', ') if atencion.codigos_cie10 else 'N/A' }}</div>
+                        <div class="data-item"><label>Plan de Manejo:</label> {{ atencion.conducta_plan_manejo }}</div>
+                        {% if atencion.profesional_responsable_nombre %}
+                            <div class="data-item"><label>Profesional Responsable:</label> {{ atencion.profesional_responsable_nombre }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if not loop.last and loop.index % 5 == 0 %}<div class="page-break"></div>{% endif %} {# Salto de página cada 5 atenciones #}
+            {% endfor %}
+        {% else %}
+            <p>No se encontraron atenciones registradas para este paciente.</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

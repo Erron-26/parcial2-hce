@@ -51,7 +51,7 @@
       }
 
       const data = await response.json();
-      localStorage.setItem("hce_access_token", data.access_token);
+      // El servidor establece la cookie, solo necesitamos redirigir.
       window.location.href = "/dashboard";
 
     } catch (error) {

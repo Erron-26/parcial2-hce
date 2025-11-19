@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Script para crear un usuario de prueba con rol de MÉDICO.
+Script para crear un usuario de prueba con rol de ADMISIONISTA.
 
-Crea usuario médico con credenciales:
-- Email: medico@hce.com
+Crea usuario admisionista con credenciales:
+- Email: admisionista@hce.com
 - Contraseña: password123
-- Documento: 2000000001
-- Rol: medico
+- Documento: 3000000001
+- Rol: admisionista
 """
 
 import sys
@@ -20,13 +20,13 @@ from backend.db import models
 from backend.core.security import get_password_hash
 
 
-def create_medico_user():
-    """Crea un usuario médico de prueba en la base de datos."""
+def create_admisionista_user():
+    """Crea un usuario admisionista de prueba en la base de datos."""
     db = SessionLocal()
     
     try:
         # Verificar si el usuario ya existe
-        email = "medico@hce.com"
+        email = "admisionista@hce.com"
         existing = db.query(models.Usuario).filter(
             models.Usuario.correo_electronico == email
         ).first()
@@ -37,33 +37,33 @@ def create_medico_user():
             return True
         
         # Crear nuevo usuario
-        medico_user = models.Usuario(
-            documento_id=2000000001,
+        admisionista_user = models.Usuario(
+            documento_id=3000000001,
             correo_electronico=email,
             hashed_password=get_password_hash("password123"),
-            primer_nombre="Doctor",
-            primer_apellido="Prueba",
-            tipo_usuario="medico", # Rol específico
+            primer_nombre="Admisionista",
+            primer_apellido="HCE",
+            tipo_usuario="admisionista", # Rol específico
         )
         
-        db.add(medico_user)
+        db.add(admisionista_user)
         db.commit()
         
-        print("✓ Usuario MÉDICO de prueba creado exitosamente")
+        print("✓ Usuario ADMISIONISTA de prueba creado exitosamente")
         print(f"  Email: {email}")
         print(f"  Contraseña: password123")
-        print(f"  Rol: medico")
+        print(f"  Rol: admisionista")
         
         db.close()
         return True
         
     except Exception as e:
-        print(f"✗ Error al crear usuario médico: {e}")
+        print(f"✗ Error al crear usuario admisionista: {e}")
         db.rollback()
         db.close()
         return False
 
 
 if __name__ == "__main__":
-    success = create_medico_user()
+    success = create_admisionista_user()
     sys.exit(0 if success else 1)

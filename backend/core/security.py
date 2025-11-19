@@ -4,11 +4,13 @@ Implementa generación de tokens, validación y manejo de contraseñas.
 """
 
 from datetime import timedelta, datetime
-from typing import Optional
+from typing import Optional, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import Depends, HTTPException, status
+from fastapi.security.oauth2 import OAuth2
+from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
+from fastapi import Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from backend.db import models
@@ -21,8 +23,35 @@ from backend.core.config import settings
 # Contexto para hash de contraseñas con argon2
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-# Esquema OAuth2
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# Clase personalizada para leer el token desde una cookie
+class OAuth2PasswordBearerWithCookie(OAuth2):
+    def __init__(
+        self,
+        tokenUrl: str,
+        scheme_name: str = None,
+        scopes: dict = None,
+        auto_error: bool = True,
+    ):
+        if not scopes:
+            scopes = {}
+        flows = OAuthFlowsModel(password={"tokenUrl": tokenUrl, "scopes": scopes})
+        super().__init__(flows=flows, scheme_name=scheme_name, auto_error=auto_error)
+
+    async def __call__(self, request: Request) -> Optional[str]:
+        token = request.cookies.get("hce_access_token")
+        if not token:
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Not authenticated",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            else:
+                return None
+        return token
+
+# Esquema OAuth2 ahora basado en la cookie
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="token")
 
 # Configuración de JWT
 SECRET_KEY = settings.SECRET_KEY if hasattr(settings, 'SECRET_KEY') else "tu-clave-secreta-cambiar-en-produccion"
@@ -103,9 +132,19 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[mod
     return user
 
 
+def get_db_for_security():
+    """Proporciona sesión de BD para funciones de seguridad."""
+    from backend.db.session import SessionLocal
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = None,
+    db: Session = Depends(get_db_for_security),
 ) -> models.Usuario:
     """
     Valida el token JWT y retorna el usuario actual.
@@ -135,10 +174,6 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    # Si db es None, significa que no fue inyectada correctamente
-    if db is None:
-        raise credentials_exception
-    
     user = db.query(models.Usuario).filter(
         models.Usuario.correo_electronico == username
     ).first()
@@ -163,7 +198,7 @@ def check_role(required_role: str):
     Returns:
         Función decoradora que valida el rol
     """
-    async def verify_role(current_user: models.Usuario = Depends(get_current_user)):
+    async def verify_role(current_user: Any = Depends(get_current_user)):
         if current_user.tipo_usuario != required_role:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

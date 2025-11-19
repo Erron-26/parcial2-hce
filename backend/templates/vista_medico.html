@@ -8,18 +8,175 @@
     <a href="/dashboard" class="btn btn-secondary">Volver al Dashboard</a>
 </div>
 
-<div class="card">
+<div class="card mb-4">
   <div class="card-header">
-    Acceso Exclusivo para Médicos
+    Búsqueda de Pacientes
   </div>
   <div class="card-body">
-    <h5 class="card-title">¡Bienvenido, Dr(a). {{ user.primer_apellido }}!</h5>
-    <p class="card-text">
-      Esta sección es exclusiva para el personal médico. Desde aquí podrá gestionar pacientes,
-      revisar historias clínicas y registrar nuevas atenciones.
-    </p>
-    <p><strong>Usuario:</strong> {{ user.correo_electronico }}</p>
-    <p><strong>Rol:</strong> {{ user.tipo_usuario }}</p>
+    <h5 class="card-title">Buscar Paciente por Documento</h5>
+    <form id="search-form">
+      <div class="input-group">
+        <input type="number" class="form-control" id="search-doc-id" placeholder="Ingrese el número de documento" required>
+        <button class="btn btn-primary" type="submit">Buscar</button>
+      </div>
+    </form>
   </div>
 </div>
+
+<div id="results-container">
+  <!-- Los resultados de la búsqueda aparecerán aquí -->
+</div>
+
+<script>
+  document.getElementById("search-form").addEventListener("submit", async function(event) {
+    event.preventDefault();
+    const docId = document.getElementById("search-doc-id").value;
+    const resultsContainer = document.getElementById("results-container");
+
+    resultsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+    try {
+      const response = await fetch(`/api/pacientes/${docId}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error en la búsqueda');
+      }
+
+      const paciente = await response.json();
+      renderPatientData(paciente);
+
+    } catch (error) {
+      resultsContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong> ${error.message}</div>`;
+    }
+  });
+
+  function renderPatientData(paciente) {
+    const resultsContainer = document.getElementById("results-container");
+
+    let atencionesHTML = '<p>No hay atenciones registradas.</p>';
+    if (paciente.atenciones && paciente.atenciones.length > 0) {
+      atencionesHTML = paciente.atenciones.map(atencion => `
+        <div class="list-group-item list-group-item-action flex-column align-items-start">
+          <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">${atencion.tipo_atencion || 'Atención'}</h5>
+            <small>${new Date(atencion.fecha_hora_atencion).toLocaleString()}</small>
+          </div>
+          <p class="mb-1"><strong>Motivo:</strong> ${atencion.motivo_consulta || 'N/A'}</p>
+          <small><strong>Diagnóstico:</strong> ${atencion.impresion_diagnostica || 'N/A'}</small>
+        </div>
+      `).join('');
+    }
+
+    resultsContainer.innerHTML = `
+      <div class="card">
+        <div class="card-header d-flex justify-content-between">
+          <h5>Resultados de la Búsqueda</h5>
+          <a href="/exportar_pdf/${paciente.documento_id}" class="btn btn-sm btn-success" target="_blank">Descargar PDF</a>
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">${paciente.primer_nombre} ${paciente.primer_apellido}</h5>
+          <p><strong>Documento:</strong> ${paciente.documento_id}</p>
+          <p><strong>Email:</strong> ${paciente.correo_electronico}</p>
+          
+          <hr>
+          <h6>Historial de Atenciones</h6>
+          <div class="list-group">
+            ${atencionesHTML}
+          </div>
+
+          <hr>
+          <button class="btn btn-info mt-3" onclick="toggleAttentionForm()">Registrar Nueva Atención</button>
+          
+          <div id="new-attention-form-container" class="mt-4" style="display: none;">
+            <h5>Nueva Atención</h5>
+            <div id="attention-alert-container"></div>
+            <form id="new-attention-form" class="row g-3">
+                <input type="hidden" id="atencion-documento-id" name="documento_id">
+                <div class="col-12">
+                    <label for="atencion-tipo" class="form-label">Tipo de Atención</label>
+                    <input type="text" class="form-control" id="atencion-tipo" name="tipo_atencion" required>
+                </div>
+                <div class="col-12">
+                    <label for="atencion-motivo" class="form-label">Motivo de Consulta</label>
+                    <textarea class="form-control" id="atencion-motivo" name="motivo_consulta" rows="2" required></textarea>
+                </div>
+                <div class="col-12">
+                    <label for="atencion-enfermedad" class="form-label">Enfermedad Actual</label>
+                    <textarea class="form-control" id="atencion-enfermedad" name="enfermedad_actual" rows="3" required></textarea>
+                </div>
+                <div class="col-12">
+                    <label for="atencion-diagnostico" class="form-label">Impresión Diagnóstica</label>
+                    <textarea class="form-control" id="atencion-diagnostico" name="impresion_diagnostica" rows="2" required></textarea>
+                </div>
+                <div class="col-12">
+                    <label for="atencion-cie10" class="form-label">Códigos CIE10 (separados por coma)</label>
+                    <input type="text" class="form-control" id="atencion-cie10" name="codigos_cie10" placeholder="Ej: I10, E11.9, Z00.1">
+                </div>
+                <div class="col-12">
+                    <label for="atencion-plan" class="form-label">Conducta / Plan de Manejo</label>
+                    <textarea class="form-control" id="atencion-plan" name="conducta_plan_manejo" rows="3" required></textarea>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary">Guardar Atención</button>
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Event listener para el nuevo formulario de atención
+    setTimeout(() => { // Usar timeout para asegurar que el formulario está en el DOM
+        const attentionForm = document.getElementById('new-attention-form');
+        if (attentionForm) {
+            document.getElementById('atencion-documento-id').value = paciente.documento_id;
+            attentionForm.addEventListener('submit', handleNewAttentionSubmit);
+        }
+    }, 0);
+  }
+
+  function toggleAttentionForm() {
+    const formContainer = document.getElementById('new-attention-form-container');
+    if (formContainer.style.display === 'none') {
+      formContainer.style.display = 'block';
+    } else {
+      formContainer.style.display = 'none';
+    }
+  }
+
+  async function handleNewAttentionSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const atencionData = {};
+    formData.forEach((value, key) => { atencionData[key] = value });
+    
+    const alertContainer = document.getElementById("attention-alert-container");
+    alertContainer.innerHTML = '';
+
+    try {
+        const response = await fetch('/api/atenciones/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(atencionData),
+        });
+
+        const responseData = await response.json();
+        if (!response.ok) {
+            throw new Error(responseData.detail || 'Error al guardar la atención');
+        }
+        
+        alertContainer.innerHTML = '<div class="alert alert-success" role="alert">Atención registrada exitosamente.</div>';
+        form.reset();
+        toggleAttentionForm();
+        // Refrescar la búsqueda para mostrar la nueva atención
+        document.getElementById('search-form').requestSubmit();
+
+    } catch (error) {
+        alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong> ${error.message}</div>`;
+    }
+  }
+</script>
+
 {% endblock %}

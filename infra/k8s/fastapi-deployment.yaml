@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-app
+  labels:
+    app: fastapi-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-app
+  template:
+    metadata:
+      labels:
+        app: fastapi-app
+    spec:
+      containers:
+      - name: fastapi-app
+        image: middleware-citus:1.0 # Nombre de la imagen Docker (se construirá localmente)
+        imagePullPolicy: Never # Usar solo imágenes construidas localmente
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DB_HOST
+          value: citus-coordinator # Nombre del servicio del coordinador de Citus en K8s
+        - name: DB_PORT
+          value: "5432" # Puerto por defecto de PostgreSQL
+        - name: DB_USER
+          value: postgres
+        - name: DB_PASSWORD
+          value: postgres
+        - name: DB_NAME
+          value: interop_db
+        - name: SECRET_KEY
+          value: "tu-clave-secreta-cambiar-en-produccion" # Usar una clave más segura en producción

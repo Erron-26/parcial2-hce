@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
     DB_NAME: str = "interop_db"
+    SECRET_KEY: str = "tu-clave-secreta-cambiar-en-produccion"
 
     @property
     def database_url(self) -> str:

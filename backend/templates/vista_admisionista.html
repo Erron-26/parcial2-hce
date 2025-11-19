@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Portal Admisionista{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Portal del Admisionista</h2>
+    <a href="/dashboard" class="btn btn-secondary">Volver al Dashboard</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    Registro de Nuevo Paciente
+  </div>
+  <div class="card-body">
+    <h5 class="card-title">Ingresar Datos del Nuevo Paciente</h5>
+    <div id="alert-container"></div>
+    <form id="new-patient-form" class="row g-3">
+      <div class="col-md-6">
+        <label for="tipo_documento" class="form-label">Tipo de Documento</label>
+        <select id="tipo_documento" name="tipo_documento" class="form-select">
+          <option value="CC" selected>Cédula de Ciudadanía</option>
+          <option value="TI">Tarjeta de Identidad</option>
+          <option value="RC">Registro Civil</option>
+          <option value="CE">Cédula de Extranjería</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label for="documento_id" class="form-label">Número de Documento</label>
+        <input type="number" class="form-control" id="documento_id" name="documento_id" required>
+      </div>
+
+      <div class="col-md-6">
+        <label for="primer_nombre" class="form-label">Primer Nombre</label>
+        <input type="text" class="form-control" id="primer_nombre" name="primer_nombre" required>
+      </div>
+      <div class="col-md-6">
+        <label for="segundo_nombre" class="form-label">Segundo Nombre</label>
+        <input type="text" class="form-control" id="segundo_nombre" name="segundo_nombre">
+      </div>
+
+      <div class="col-md-6">
+        <label for="primer_apellido" class="form-label">Primer Apellido</label>
+        <input type="text" class="form-control" id="primer_apellido" name="primer_apellido" required>
+      </div>
+      <div class="col-md-6">
+        <label for="segundo_apellido" class="form-label">Segundo Apellido</label>
+        <input type="text" class="form-control" id="segundo_apellido" name="segundo_apellido">
+      </div>
+
+      <div class="col-md-6">
+        <label for="fecha_nacimiento" class="form-label">Fecha de Nacimiento</label>
+        <input type="date" class="form-control" id="fecha_nacimiento" name="fecha_nacimiento">
+      </div>
+      <div class="col-md-6">
+        <label for="sexo" class="form-label">Sexo</label>
+        <select id="sexo" name="sexo" class="form-select">
+          <option value="Masculino">Masculino</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label for="direccion_residencia" class="form-label">Dirección de Residencia</label>
+        <input type="text" class="form-control" id="direccion_residencia" name="direccion_residencia" placeholder="Calle 123 #45-67">
+      </div>
+
+      <div class="col-md-6">
+        <label for="telefono" class="form-label">Teléfono</label>
+        <input type="tel" class="form-control" id="telefono" name="telefono">
+      </div>
+      <div class="col-md-6">
+        <label for="correo_electronico" class="form-label">Correo Electrónico</label>
+        <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" required>
+      </div>
+
+      <div class="col-md-6">
+        <label for="password" class="form-label">Contraseña</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+      </div>
+
+      <div class="col-12 mt-4">
+        <button type="submit" class="btn btn-success">Registrar Paciente</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.getElementById("new-patient-form").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const form = event.target;
+    const formData = new FormData(form);
+    const patientData = {};
+    for (let [key, value] of formData.entries()) {
+      patientData[key] = value;
+    }
+    patientData['tipo_usuario'] = 'paciente'; // Asignar rol por defecto
+
+    const alertContainer = document.getElementById("alert-container");
+    alertContainer.innerHTML = ''; // Limpiar alertas previas
+
+    try {
+      const response = await fetch("/api/pacientes/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(patientData)
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.detail || "Error al registrar paciente");
+      }
+
+      // Éxito
+      alertContainer.innerHTML = '<div class="alert alert-success" role="alert">Paciente registrado exitosamente.</div>';
+      form.reset(); // Limpiar el formulario
+      
+    } catch (error) {
+      alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong> ${error.message}</div>`;
+    }
+  });
+</script>
+
+{% endblock %}
