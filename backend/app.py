@@ -44,7 +44,7 @@ async def startup_event():
         print(f"[ADVERTENCIA] No se pudieron crear tablas en startup: {e}")
         print("[ADVERTENCIA] Asegúrate de que init.sql se ejecutó en el coordinador de Citus")
 
-templates = Jinja2Templates(directory="backend/templates")
+templates = Jinja2Templates(directory="backend/templates", autoescape=True)
 
 def get_db():
     db = SessionLocal()
@@ -92,6 +92,15 @@ def buscar_paciente_por_id(
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     
+    for atencion in paciente.atenciones:
+        if atencion.profesional_responsable:
+            profesional = db.query(models.ProfesionalSalud).filter(
+                models.ProfesionalSalud.id_personal_salud == atencion.profesional_responsable
+            ).first()
+            atencion.profesional_responsable_nombre = profesional.nombre_completo if profesional else "Desconocido"
+        else:
+            atencion.profesional_responsable_nombre = "No especificado"
+
     return paciente
 
 @app.get("/api/admision/pacientes/{documento_id}", response_model=schemas.Usuario, tags=["API Admisionistas"])
@@ -194,19 +203,6 @@ async def crear_atencion(
 
     atencion_data = atencion_in.model_dump(exclude_none=True)
     
-    # Procesar la cadena de codigos_cie10 en una lista
-    codigos_str = atencion_data.pop("codigos_cie10", None)
-    if codigos_str:
-        atencion_data['codigos_cie10'] = [code.strip() for code in codigos_str.split(',')]
-    
-    # Procesar la cadena JSON de signos_vitales
-    signos_vitales_str = atencion_data.pop("signos_vitales", None)
-    if signos_vitales_str:
-        try:
-            atencion_data['signos_vitales'] = json.loads(signos_vitales_str)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="El formato de Signos Vitales no es un JSON válido.")
-
     db_atencion = models.Atencion(
         **atencion_data,
         fecha_hora_atencion=datetime.now(),
@@ -251,7 +247,21 @@ async def medico_page(request: Request, current_user: Any = Depends(check_role("
     return templates.TemplateResponse("vista_medico.html", {"request": request, "user": current_user})
 
 @app.get("/paciente/me", response_class=HTMLResponse, tags=["Frontend Roles"])
-async def paciente_page(request: Request, current_user: Any = Depends(check_role("paciente"))):
+async def paciente_page(request: Request, db: Session = Depends(get_db), current_user: Any = Depends(check_role("paciente"))):
+    # Cargar atenciones si no están cargadas
+    if not hasattr(current_user, 'atenciones'):
+        current_user.atenciones = db.query(models.Atencion).filter(models.Atencion.documento_id == current_user.documento_id).order_by(models.Atencion.fecha_hora_atencion.desc()).all()
+
+    # Resolver nombres de profesionales
+    for atencion in current_user.atenciones:
+        if atencion.profesional_responsable:
+            profesional = db.query(models.ProfesionalSalud).filter(
+                models.ProfesionalSalud.id_personal_salud == atencion.profesional_responsable
+            ).first()
+            atencion.profesional_responsable_nombre = profesional.nombre_completo if profesional else "Desconocido"
+        else:
+            atencion.profesional_responsable_nombre = "No especificado"
+
     return templates.TemplateResponse("vista_paciente.html", {"request": request, "user": current_user})
 
 @app.get("/admisionista", response_class=HTMLResponse, tags=["Frontend Roles"])
@@ -263,50 +273,13 @@ async def exportar_historia_pdf(
     request: Request,
     documento_id: int,
     db: Session = Depends(get_db),
-    current_user: Any = Depends(check_role("medico"))
+    current_user: Any = Depends(check_role(["medico", "paciente"]))
 ):
     paciente = db.query(models.Usuario).filter(models.Usuario.documento_id == documento_id).first()
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
 
     atenciones = db.query(models.Atencion).filter(models.Atencion.documento_id == documento_id).order_by(models.Atencion.fecha_hora_atencion.desc()).all()
-
-    for atencion in atenciones:
-        if atencion.profesional_responsable:
-            profesional = db.query(models.ProfesionalSalud).filter(
-                models.ProfesionalSalud.id_personal_salud == atencion.profesional_responsable
-            ).first()
-            atencion.profesional_responsable_nombre = profesional.nombre_completo if profesional else "Desconocido"
-        else:
-            atencion.profesional_responsable_nombre = "No especificado"
-
-    html_content = templates.TemplateResponse(
-        "pdf_template.html", 
-        {"request": request, "paciente": paciente, "atenciones": atenciones}
-    ).body.decode("utf-8")
-
-    pdf_buffer = BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
-    pdf_buffer.seek(0)
-
-    filename = f"historia_clinica_{paciente.documento_id}.pdf"
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
-
-@app.get("/api/paciente/me/pdf", tags=["PDF", "Frontend Roles"], response_class=StreamingResponse)
-async def exportar_mi_historia_pdf(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: Any = Depends(check_role("paciente"))
-):
-    """
-    Permite a un paciente descargar su propia historia clínica en PDF.
-    """
-    paciente = current_user
-    atenciones = db.query(models.Atencion).filter(models.Atencion.documento_id == paciente.documento_id).order_by(models.Atencion.fecha_hora_atencion.desc()).all()
 
     for atencion in atenciones:
         if atencion.profesional_responsable:

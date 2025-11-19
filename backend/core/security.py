@@ -188,22 +188,27 @@ async def get_current_user(
 # FUNCIONES DE AUTORIZACIÓN POR ROL
 # ============================================
 
-def check_role(required_role: str):
+from typing import Optional, Any, List, Union
+
+def check_role(required_roles: Union[str, List[str]]):
     """
-    Crea una función decoradora para verificar el rol del usuario.
+    Crea una dependencia que verifica si el usuario actual tiene uno de los roles requeridos.
     
     Args:
-        required_role: Rol requerido (ej: "medico", "paciente", "admisionista")
+        required_roles: Un string de rol o una lista de strings de roles permitidos.
     
     Returns:
-        Función decoradora que valida el rol
+        La dependencia que valida el rol del usuario.
     """
-    async def verify_role(current_user: Any = Depends(get_current_user)):
-        if current_user.tipo_usuario != required_role:
+    if isinstance(required_roles, str):
+        required_roles = [required_roles]
+
+    async def role_checker(current_user: models.Usuario = Depends(get_current_user)):
+        if current_user.tipo_usuario not in required_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Se requiere rol '{required_role}' para acceder a este recurso",
+                detail=f"Acceso denegado. Se requiere uno de los siguientes roles: {', '.join(required_roles)}",
             )
         return current_user
     
-    return verify_role
+    return role_checker

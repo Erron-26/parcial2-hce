@@ -4,11 +4,22 @@ from typing import Optional, List, Any
 
 # Esquema para una atención médica
 class Atencion(BaseModel):
-    atencion_id: Any  # UUID puede ser complejo para Pydantic, Any es más simple
+    atencion_id: Any
     fecha_hora_atencion: datetime
     tipo_atencion: Optional[str] = None
     motivo_consulta: Optional[str] = None
     impresion_diagnostica: Optional[str] = None
+    enfermedad_actual: Optional[str] = None
+    antecedentes_personales: Optional[str] = None
+    antecedentes_familiares: Optional[str] = None
+    alergias_conocidas: Optional[str] = None
+    medicamentos_actuales: Optional[str] = None
+    signos_vitales: Optional[Any] = None
+    examen_fisico_general: Optional[str] = None
+    examen_fisico_por_sistemas: Optional[str] = None
+    conducta_plan_manejo: Optional[str] = None
+    codigos_cie10: Optional[List[str]] = None
+    profesional_responsable_nombre: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -27,7 +38,7 @@ class AtencionCreate(BaseModel):
     examen_fisico_por_sistemas: Optional[str] = None
     impresion_diagnostica: str
     conducta_plan_manejo: str
-    codigos_cie10: Optional[str] = None # Se enviará como un string separado por comas
+    codigos_cie10: Optional[List[str]] = None # Se enviará como un string separado por comas
 
 
 # Esquema base para el usuario (sin contraseña)

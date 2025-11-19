@@ -1,20 +1,179 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Sistema de HCE{% endblock %}</title>
+  <title>{% block title %}HCE Distribuido{% endblock %}</title>
+  
+  <!-- Google Fonts: Inter para una UI moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
   <style>
+    :root {
+      /* Paleta Médica Moderna */
+      --primary-color: #0e7490; /* Cyan-700: Profesional y calmado */
+      --primary-hover: #155e75;
+      --secondary-color: #0ea5e9; /* Sky-500 */
+      --accent-color: #f0f9ff; /* Sky-50 */
+      --text-main: #1e293b; /* Slate-800 */
+      --text-muted: #64748b; /* Slate-500 */
+      --bg-body: #f8fafc;    /* Slate-50 */
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --font-main: 'Inter', sans-serif;
+    }
+
     body {
-      background-color: #f8f9fa;
+      background-color: var(--bg-body);
+      font-family: var(--font-main);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Navbar elegante y limpia */
+    .navbar {
+      background-color: #ffffff;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    .navbar-brand {
+      color: var(--primary-color);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.025em;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-link:hover, .nav-link.active {
+      color: var(--primary-color);
+    }
+
+    /* Tarjetas con estilo "Float" */
+    .card {
+      border: none;
+      border-radius: 1rem;
+      box-shadow: var(--card-shadow);
+      background: #fff;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .card-header {
+      background-color: transparent;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1.25rem 1.5rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    /* Botones modernos */
+    .btn {
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline-primary {
+      color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    .btn-outline-primary:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    /* Utilidades */
+    .text-primary-custom { color: var(--primary-color) !important; }
+    .bg-soft { background-color: var(--accent-color); }
+    
+    .main-container { flex: 1; padding-top: 2rem; }
+    
+    footer {
+      background-color: #fff;
+      padding: 1.5rem 0;
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      border-top: 1px solid #e2e8f0;
+      margin-top: auto;
     }
   </style>
 </head>
 <body>
-  <div class="container mt-4">
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="/dashboard">
+        <div class="rounded-circle bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <i class="bi bi-heart-pulse-fill text-primary-custom"></i>
+        </div>
+        <span>SaludConnect</span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto align-items-center gap-2">
+          {% if user %}
+          <li class="nav-item">
+            <span class="badge bg-primary bg-opacity-10 text-primary-custom px-3 py-2 rounded-pill">
+                <i class="bi bi-person-circle me-1"></i> {{ user.primer_nombre }}
+            </span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/dashboard">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-outline-danger btn-sm border-0" href="/logout">
+              <i class="bi bi-box-arrow-right"></i> Salir
+            </a>
+          </li>
+          {% else %}
+          <li class="nav-item">
+            <a class="btn btn-primary" href="/login">Iniciar Sesión</a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container main-container mb-5">
     {% block content %}{% endblock %}
-  </div>
+  </main>
+  
+  <footer>
+    <div class="container">
+      <p class="mb-0">&copy; 2025 <strong>SaludConnect</strong>. Sistema de Historias Clínicas Electrónicas Distribuido.</p>
+    </div>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

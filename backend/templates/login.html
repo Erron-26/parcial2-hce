@@ -3,70 +3,107 @@
 {% block title %}Iniciar Sesión{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6 col-lg-4">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h3 class="card-title text-center mb-4">Iniciar Sesión</h3>
-        <div id="error-alert" class="alert alert-danger d-none" role="alert"></div>
+<!-- Sobrescribimos el container principal para usar width completo en login -->
+<style>
+    .login-wrapper { margin-top: -2rem; }
+    .login-image {
+        background: url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80') no-repeat center center;
+        background-size: cover;
+        min-height: 80vh;
+        border-radius: 1.5rem;
+        position: relative;
+    }
+    .login-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(135deg, rgba(14, 116, 144, 0.8), rgba(14, 165, 233, 0.6));
+        border-radius: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+</style>
+
+<div class="row g-0 login-wrapper shadow-lg rounded-4 overflow-hidden bg-white mt-4">
+  <!-- Columna Imagen -->
+  <div class="col-lg-6 d-none d-lg-block p-2">
+    <div class="login-image">
+        <div class="login-overlay p-5 text-center">
+            <div>
+                <h1 class="display-4 fw-bold mb-3">SaludConnect</h1>
+                <p class="lead">Gestión clínica distribuida, segura y eficiente para profesionales modernos.</p>
+            </div>
+        </div>
+    </div>
+  </div>
+  <!-- Columna Formulario -->
+  <div class="col-lg-6 p-5 d-flex align-items-center">
+    <div class="w-100" style="max-width: 420px; margin: 0 auto;">
+        <div class="text-center mb-5">
+            <div class="bg-primary bg-opacity-10 text-primary-custom rounded-circle d-inline-flex p-3 mb-3">
+                <i class="bi bi-shield-lock-fill fs-2"></i>
+            </div>
+            <h2 class="fw-bold text-dark">Bienvenido</h2>
+            <p class="text-muted">Ingresa tus credenciales para acceder</p>
+        </div>
+
+        <div id="error-alert" class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger d-none mb-4 rounded-3" role="alert"></div>
+
         <form id="login-form">
-          <div class="mb-3">
-            <label for="username" class="form-label">Correo Electrónico</label>
-            <input type="email" class="form-control" id="username" name="username" required>
-          </div>
-          <div class="mb-3">
-            <label for="password" class="form-label">Contraseña</label>
-            <input type="password" class="form-control" id="password" name="password" required>
-          </div>
-          <div class="d-grid">
-            <button type="submit" class="btn btn-primary">Ingresar</button>
-          </div>
+            <div class="form-floating mb-3">
+                <input type="email" class="form-control bg-light border-0" id="username" name="username" placeholder="name@example.com" required>
+                <label for="username" class="text-muted">Correo Electrónico</label>
+            </div>
+            <div class="form-floating mb-4">
+                <input type="password" class="form-control bg-light border-0" id="password" name="password" placeholder="Password" required>
+                <label for="password" class="text-muted">Contraseña</label>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg py-3 shadow-sm">
+                    Ingresar al Sistema
+                </button>
+            </div>
         </form>
-      </div>
+        
+        <div class="text-center mt-4">
+            <small class="text-muted">Sistema protegido por OAuth2 & JWT</small>
+        </div>
     </div>
   </div>
 </div>
 
 <script>
+  // Tu script de JS original se mantiene igual, es funcional.
+  // Solo copiamos la lógica:
   function formatFastApiError(errorData) {
-    if (!errorData || !errorData.detail) { return "Error desconocido o sin detalle."; }
-    if (Array.isArray(errorData.detail)) {
-        return errorData.detail.map(err => `<b>${err.loc.slice(1).join(' &rarr; ')}</b>: ${err.msg}`).join('<br>');
-    }
-    if (typeof errorData.detail === 'string') { return errorData.detail; }
-    return JSON.stringify(errorData.detail);
+    if (!errorData || !errorData.detail) return "Error desconocido.";
+    if (Array.isArray(errorData.detail)) return errorData.detail.map(e => e.msg).join('<br>');
+    return typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail);
   }
 
   document.getElementById("login-form").addEventListener("submit", async function(event) {
     event.preventDefault();
-
     const form = event.target;
-    const formData = new FormData();
-    formData.append("username", form.username.value);
-    formData.append("password", form.password.value);
-
-    const errorAlert = document.getElementById("error-alert");
-    errorAlert.classList.add("d-none");
+    const formData = new FormData(form);
+    const btn = form.querySelector('button');
+    
+    document.getElementById("error-alert").classList.add("d-none");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
 
     try {
-      const response = await fetch("/token", {
-        method: "POST",
-        body: formData
-      });
-      
-      const responseData = await response.json();
-      if (!response.ok) {
-        throw responseData;
-      }
-      
+      const response = await fetch("/token", { method: "POST", body: formData });
+      if (!response.ok) throw await response.json();
       window.location.href = "/dashboard";
-
     } catch (error) {
-      const errorMessage = formatFastApiError(error);
-      errorAlert.innerHTML = `<strong>Error:</strong><br>${errorMessage}`;
-      errorAlert.classList.remove("d-none");
+      const alert = document.getElementById("error-alert");
+      alert.innerHTML = `<i class="bi bi-exclamation-circle me-2"></i>${formatFastApiError(error)}`;
+      alert.classList.remove("d-none");
+      btn.disabled = false;
+      btn.innerHTML = 'Ingresar al Sistema';
     }
   });
 </script>
-
 {% endblock %}

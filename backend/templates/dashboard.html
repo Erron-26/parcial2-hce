@@ -3,46 +3,97 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="card-title mb-0">Bienvenido</h3>
-        <a href="/logout" class="btn btn-danger btn-sm">Cerrar Sesión</a>
-      </div>
-      <div class="card-body">
-        <p>Has iniciado sesión correctamente en el sistema de HCE.</p>
-        <ul>
-          <li><strong>Usuario:</strong> {{ user.correo_electronico }}</li>
-          <li><strong>Rol:</strong> {{ user.tipo_usuario }}</li>
-        </ul>
-        
-        <hr>
-        <h5>Acciones Disponibles</h5>
-        <div id="role-menu">
-          {% if user.tipo_usuario == 'medico' %}
-            <div class="list-group">
-              <a href="/medico" class="list-group-item list-group-item-action">
-                Acceder al Portal Médico
-              </a>
+<div class="py-3">
+  <header class="d-flex justify-content-between align-items-end mb-5">
+    <div>
+        <h6 class="text-uppercase text-primary-custom fw-bold ls-1 mb-1">Panel de Control</h6>
+        <h2 class="fw-bold text-dark mb-0">Hola, {{ user.primer_nombre }}</h2>
+        <p class="text-muted mt-1">Rol: <span class="badge bg-dark text-white">{{ user.tipo_usuario|capitalize }}</span></p>
+    </div>
+    <div class="d-none d-md-block">
+        <span class="text-muted small">{{ request.headers.get('date') }}</span>
+    </div>
+  </header>
+
+  <div class="row g-4">
+    <!-- Tarjeta Médico -->
+    {% if user.tipo_usuario == 'medico' %}
+    <div class="col-md-6 col-xl-4">
+      <div class="card h-100 border-0 shadow-hover">
+        <div class="card-body d-flex flex-column p-4">
+          <div class="mb-4">
+            <div class="d-inline-block p-3 rounded-4 bg-primary bg-opacity-10 text-primary-custom mb-3">
+                <i class="bi bi-heart-pulse fs-3"></i>
             </div>
-          {% elif user.tipo_usuario == 'paciente' %}
-            <div class="list-group">
-              <a href="/paciente/me" class="list-group-item list-group-item-action">Ver Mis Datos Personales</a>
-              <a href="#" class="list-group-item list-group-item-action disabled">(Próximamente) Descargar mi HCE en PDF</a>
-            </div>
-          {% elif user.tipo_usuario == 'admisionista' %}
-            <div class="list-group">
-              <a href="/admisionista" class="list-group-item list-group-item-action">Acceder al Portal de Admisión</a>
-              <a href="#" class="list-group-item list-group-item-action disabled">(Próximamente) Gestionar Ingresos</a>
-            </div>
-          {% else %}
-            <p>No hay acciones disponibles para tu rol.</p>
-          {% endif %}
+            <h3 class="h4 fw-bold">Atención Médica</h3>
+            <p class="text-muted">Gestión de consultas, historias clínicas y diagnósticos.</p>
+          </div>
+          <a href="/medico" class="btn btn-outline-primary w-100 mt-auto stretched-link">
+            Acceder al Portal <i class="bi bi-arrow-right ms-1"></i>
+          </a>
         </div>
       </div>
     </div>
+    {% endif %}
+
+    <!-- Tarjeta Admisionista -->
+    {% if user.tipo_usuario == 'admisionista' %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-hover">
+          <div class="card-body d-flex flex-column p-4">
+            <div class="mb-4">
+              <div class="d-inline-block p-3 rounded-4 bg-info bg-opacity-10 text-info mb-3">
+                  <i class="bi bi-people fs-3"></i>
+              </div>
+              <h3 class="h4 fw-bold">Admisión</h3>
+              <p class="text-muted">Registro de pacientes, actualización de datos y gestión de ingresos.</p>
+            </div>
+            <a href="/admisionista" class="btn btn-outline-info text-info w-100 mt-auto stretched-link border-info">
+              Gestionar Pacientes <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Tarjeta Paciente -->
+    {% if user.tipo_usuario == 'paciente' %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-hover">
+          <div class="card-body d-flex flex-column p-4">
+            <div class="mb-4">
+              <div class="d-inline-block p-3 rounded-4 bg-success bg-opacity-10 text-success mb-3">
+                  <i class="bi bi-journal-medical fs-3"></i>
+              </div>
+              <h3 class="h4 fw-bold">Mi Historia</h3>
+              <p class="text-muted">Consulta tus antecedentes, diagnósticos y exporta tu historia.</p>
+            </div>
+            <a href="/paciente/me" class="btn btn-outline-success w-100 mt-auto stretched-link">
+              Ver Mi Expediente <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Tarjeta Informativa (Relleno estético) -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 bg-dark text-white border-0" style="background: linear-gradient(135deg, #1e293b, #0f172a);">
+            <div class="card-body p-4 d-flex flex-column justify-content-center text-center">
+                <i class="bi bi-shield-check fs-1 mb-3 text-success"></i>
+                <h4 class="fw-bold">Sistema Seguro</h4>
+                <p class="text-white-50 small">Esta sesión está encriptada y protegida bajo estándares HL7 y OAuth2.</p>
+            </div>
+        </div>
+    </div>
+
   </div>
 </div>
-{% endblock %}
 
+<style>
+    .shadow-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+</style>
+{% endblock %}

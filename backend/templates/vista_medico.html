@@ -3,213 +3,318 @@
 {% block title %}Portal Médico{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Portal Médico</h2>
-    <a href="/dashboard" class="btn btn-secondary">Volver al Dashboard</a>
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h2 class="fw-bold text-dark mb-0">Portal Médico</h2>
+        <p class="text-muted">Consulta y registro clínico</p>
+    </div>
+    <div class="col-auto">
+        <a href="/dashboard" class="btn btn-light text-muted border"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+    </div>
 </div>
 
-<div class="card mb-4">
-  <div class="card-header">
-    Búsqueda de Pacientes
-  </div>
-  <div class="card-body">
-    <h5 class="card-title">Buscar Paciente por Documento</h5>
-    <form id="search-form">
-      <div class="input-group">
-        <input type="number" class="form-control" id="search-doc-id" placeholder="Ingrese el número de documento" required>
-        <button class="btn btn-primary" type="submit">Buscar</button>
-      </div>
+<!-- Buscador Flotante -->
+<div class="card mb-5 border-0 shadow-sm">
+  <div class="card-body p-4">
+    <form id="search-form" class="row g-3 align-items-end">
+        <div class="col-md-10">
+            <label for="search-doc-id" class="form-label fw-bold text-primary-custom small text-uppercase">Buscar Paciente</label>
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                <input type="number" class="form-control border-start-0 ps-0" id="search-doc-id" placeholder="Ingrese número de documento" required>
+            </div>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-primary btn-lg" type="submit">Buscar</button>
+        </div>
     </form>
   </div>
 </div>
 
-<div id="results-container">
-  <!-- Los resultados de la búsqueda aparecerán aquí -->
-</div>
+<div id="results-container"></div>
 
 <script>
-  function formatFastApiError(errorData) {
-    if (!errorData || !errorData.detail) { return "Error desconocido o sin detalle."; }
-    if (Array.isArray(errorData.detail)) {
-        return errorData.detail.map(err => `<b>${err.loc.slice(1).join(' &rarr; ')}</b>: ${err.msg}`).join('<br>');
-    }
-    if (typeof errorData.detail === 'string') { return errorData.detail; }
-    return JSON.stringify(errorData.detail);
+  function formatError(err) {
+    if (typeof err.detail === 'string') return err.detail;
+    return JSON.stringify(err);
   }
 
-  document.getElementById("search-form").addEventListener("submit", async function(event) {
-    event.preventDefault();
+  // Función auxiliar segura para textos
+  const safeText = (text) => {
+      if (text === null || text === undefined || text === "") return '<span class="text-muted fst-italic">No registrado</span>';
+      return text;
+  };
+
+  document.getElementById("search-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
     const docId = document.getElementById("search-doc-id").value;
-    const resultsContainer = document.getElementById("results-container");
-    resultsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    const container = document.getElementById("results-container");
+    
+    container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Buscando en base distribuida...</p></div>';
 
     try {
-      const response = await fetch(`/api/pacientes/${docId}`);
-      if (!response.ok) {
-        throw await response.json();
-      }
-      const paciente = await response.json();
-      renderPatientData(paciente);
-    } catch (error) {
-      const errorMessage = formatFastApiError(error);
-      resultsContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong><br>${errorMessage}</div>`;
+      const res = await fetch(`/api/pacientes/${docId}`);
+      if (!res.ok) throw await res.json();
+      const paciente = await res.json();
+      renderPatient(paciente);
+    } catch (err) {
+      container.innerHTML = `<div class="alert alert-warning border-0 shadow-sm"><i class="bi bi-exclamation-triangle-fill me-2"></i> ${formatError(err)}</div>`;
     }
   });
 
-  function renderPatientData(paciente) {
-    const resultsContainer = document.getElementById("results-container");
+  function renderPatient(p) {
+    console.log("Datos completos del paciente:", p); // Log para depurar
+    const container = document.getElementById("results-container");
 
-    let atencionesHTML = '<p>No hay atenciones registradas.</p>';
-    if (paciente.atenciones && paciente.atenciones.length > 0) {
-      atencionesHTML = paciente.atenciones.map(atencion => `
-        <div class="list-group-item list-group-item-action flex-column align-items-start">
-          <div class="d-flex w-100 justify-content-between">
-            <h5 class="mb-1">${atencion.tipo_atencion || 'Atención'}</h5>
-            <small>${new Date(atencion.fecha_hora_atencion).toLocaleString()}</small>
-          </div>
-          <p class="mb-1"><strong>Motivo:</strong> ${atencion.motivo_consulta || 'N/A'}</p>
-          <small><strong>Diagnóstico:</strong> ${atencion.impresion_diagnostica || 'N/A'}</small>
-        </div>
-      `).join('');
+    // Renderizado del Historial
+    let historyHTML = '<div class="text-center p-4 bg-light rounded-3 text-muted">No hay historial previo.</div>';
+    
+    if (p.atenciones && p.atenciones.length > 0) {
+        historyHTML = '<div class="accordion custom-accordion" id="historyAcc">';
+        p.atenciones.forEach((a, i) => {
+            console.log(`Datos de la atención #${i}:`, a); // Log para cada atención
+            const motivo = safeText(a.motivo_consulta);
+            const enfermedad = safeText(a.enfermedad_actual);
+            const plan = safeText(a.conducta_plan_manejo);
+            const diag = safeText(a.impresion_diagnostica);
+            
+            historyHTML += `
+            <div class="accordion-item border-0 mb-3 shadow-sm rounded overflow-hidden">
+                <h2 class="accordion-header" id="h-${i}">
+                    <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#c-${i}">
+                        <div class="d-flex flex-column flex-md-row w-100 gap-2 align-items-md-center">
+                            <span class="badge bg-primary bg-opacity-10 text-primary-custom rounded-pill me-2">${a.tipo_atencion || 'Consulta'}</span>
+                            <span class="fw-bold text-dark flex-grow-1">${new Date(a.fecha_hora_atencion).toLocaleString()}</span>
+                            <small class="text-muted me-3"><i class="bi bi-person-badge me-1"></i>${a.profesional_responsable_nombre || 'Médico'}</small>
+                        </div>
+                    </button>
+                </h2>
+                <div id="c-${i}" class="accordion-collapse collapse" data-bs-parent="#historyAcc">
+                    <div class="accordion-body bg-light bg-opacity-25">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="small text-uppercase text-muted fw-bold">Motivo</label>
+                                <p class="mb-0">${motivo}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small text-uppercase text-muted fw-bold">Diagnóstico</label>
+                                <p class="mb-0">${diag}</p>
+                            </div>
+                            <div class="col-12">
+                                <div class="p-3 bg-white rounded border border-light">
+                                    <label class="small text-uppercase text-primary-custom fw-bold mb-2">Enfermedad Actual</label>
+                                    <p class="mb-0 text-secondary">${enfermedad}</p>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="p-3 bg-white rounded border border-light">
+                                    <label class="small text-uppercase text-success fw-bold mb-2">Plan de Manejo</label>
+                                    <p class="mb-0 text-secondary">${plan}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        });
+        historyHTML += '</div>';
     }
 
-    resultsContainer.innerHTML = `
-      <div class="card">
-        <div class="card-header d-flex justify-content-between">
-          <h5>Resultados de la Búsqueda</h5>
-          <a href="/exportar_pdf/${paciente.documento_id}" class="btn btn-sm btn-success" target="_blank">Descargar PDF</a>
+    // Renderizado Principal
+    container.innerHTML = `
+      <div class="row g-4">
+        <!-- Sidebar Datos Paciente -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100 sticky-top" style="top: 5rem; z-index: 1;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3 position-relative d-inline-block">
+                        <div class="rounded-circle bg-gray-200 d-flex align-items-center justify-content-center bg-light text-secondary" style="width: 100px; height: 100px; margin: 0 auto;">
+                            <i class="bi bi-person-fill display-4"></i>
+                        </div>
+                        <span class="position-absolute bottom-0 end-0 badge rounded-pill bg-success border border-white">Activo</span>
+                    </div>
+                    <h3 class="fw-bold">${p.primer_nombre} ${p.primer_apellido}</h3>
+                    <p class="text-muted mb-4">${p.tipo_documento} ${p.documento_id}</p>
+                    
+                    <div class="d-grid gap-2 mb-4">
+                        <a href="/exportar_pdf/${p.documento_id}" target="_blank" class="btn btn-outline-danger">
+                            <i class="bi bi-file-pdf me-2"></i> Exportar PDF
+                        </a>
+                    </div>
+
+                    <ul class="list-group list-group-flush text-start small">
+                        <li class="list-group-item px-0 bg-transparent d-flex justify-content-between">
+                            <span class="text-muted">Edad</span> <span>${p.edad || '--'} años</span>
+                        </li>
+                        <li class="list-group-item px-0 bg-transparent d-flex justify-content-between">
+                            <span class="text-muted">Género</span> <span>${p.genero || '--'}</span>
+                        </li>
+                        <li class="list-group-item px-0 bg-transparent d-flex justify-content-between">
+                            <span class="text-muted">Sangre</span> <span class="badge bg-danger bg-opacity-10 text-danger">${p.grupo_sanguineo || '?'} ${p.factor_rh || ''}</span>
+                        </li>
+                        <li class="list-group-item px-0 bg-transparent">
+                            <span class="text-muted d-block mb-1">Contacto</span>
+                            <i class="bi bi-envelope me-1"></i> ${p.correo_electronico}
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-          <h5 class="card-title">${paciente.primer_nombre} ${paciente.primer_apellido}</h5>
-          <p><strong>Documento:</strong> ${paciente.documento_id}</p>
-          <p><strong>Email:</strong> ${paciente.correo_electronico}</p>
-          
-          <hr>
-          <h6>Historial de Atenciones</h6>
-          <div class="list-group">
-            ${atencionesHTML}
-          </div>
 
-          <hr>
-          <button class="btn btn-info mt-3" onclick="toggleAttentionForm()">Registrar Nueva Atención</button>
-          
-          <div id="new-attention-form-container" class="mt-4" style="display: none;">
-            <h5>Nueva Atención</h5>
-            <div id="attention-alert-container"></div>
-            <form id="new-attention-form" class="row g-3">
-                <input type="hidden" id="atencion-documento-id" name="documento_id">
-                
-                <div class="col-md-6">
-                    <label for="atencion-tipo" class="form-label">Tipo de Atención</label>
-                    <input type="text" class="form-control" id="atencion-tipo" name="tipo_atencion" required value="Consulta Externa">
-                </div>
-                <div class="col-12">
-                    <label for="atencion-motivo" class="form-label">Motivo de Consulta</label>
-                    <textarea class="form-control" id="atencion-motivo" name="motivo_consulta" rows="2" required></textarea>
-                </div>
-                <div class="col-12">
-                    <label for="atencion-enfermedad" class="form-label">Enfermedad Actual</label>
-                    <textarea class="form-control" id="atencion-enfermedad" name="enfermedad_actual" rows="3" required></textarea>
-                </div>
+        <!-- Columna Central: Historial y Nueva Atención -->
+        <div class="col-lg-8">
+            <!-- Botón Nueva Atención (Collapse) -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold m-0">Historial Clínico</h4>
+                <button class="btn btn-primary rounded-pill px-4" type="button" data-bs-toggle="collapse" data-bs-target="#formCollapse">
+                    <i class="bi bi-plus-lg me-2"></i> Nueva Atención
+                </button>
+            </div>
 
-                <h6 class="mt-4">Antecedentes</h6>
-                <div class="col-md-6">
-                    <label for="antecedentes_personales" class="form-label">Antecedentes Personales</label>
-                    <textarea class="form-control" id="antecedentes_personales" name="antecedentes_personales" rows="3"></textarea>
-                </div>
-                <div class="col-md-6">
-                    <label for="antecedentes_familiares" class="form-label">Antecedentes Familiares</label>
-                    <textarea class="form-control" id="antecedentes_familiares" name="antecedentes_familiares" rows="3"></textarea>
-                </div>
-                <div class="col-md-6">
-                    <label for="alergias_conocidas" class="form-label">Alergias Conocidas</label>
-                    <textarea class="form-control" id="alergias_conocidas" name="alergias_conocidas" rows="2"></textarea>
-                </div>
-                <div class="col-md-6">
-                    <label for="medicamentos_actuales" class="form-label">Medicamentos Actuales</label>
-                    <textarea class="form-control" id="medicamentos_actuales" name="medicamentos_actuales" rows="2"></textarea>
-                </div>
+            <!-- Formulario Nueva Atención -->
+            <div class="collapse mb-4" id="formCollapse">
+                <div class="card border-0 shadow border-top border-primary border-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4 text-primary-custom">Registrar Evolución</h5>
+                        <div id="form-alert"></div>
+                        <form id="new-attention-form" class="row g-3">
+                            <input type="hidden" name="documento_id" value="${p.documento_id}">
+                            
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">Tipo</label>
+                                <select class="form-select" name="tipo_atencion">
+                                    <option>Consulta Externa</option>
+                                    <option>Urgencias</option>
+                                    <option>Control</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted">CIE10 (Sep. comas)</label>
+                                <input type="text" class="form-control" name="codigos_cie10" placeholder="E11.9, I10">
+                            </div>
 
-                <h6 class="mt-4">Examen Físico</h6>
-                <div class="col-12">
-                    <label for="signos_vitales" class="form-label">Signos Vitales (formato JSON)</label>
-                    <textarea class="form-control" id="signos_vitales" name="signos_vitales" rows="3" placeholder='{"ta": "120/80", "fc": 80, "fr": 18, "temp": 36.5, "sat": 98}'></textarea>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-muted">Motivo de Consulta *</label>
+                                <textarea class="form-control" name="motivo_consulta" rows="2" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-muted">Enfermedad Actual *</label>
+                                <textarea class="form-control" name="enfermedad_actual" rows="3" required></textarea>
+                            </div>
+
+                            <!-- Pestañas internas para organizar mejor el form -->
+                            <div class="col-12">
+                                <ul class="nav nav-tabs mt-2" id="medTabs" role="tablist">
+                                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-exam">Examen Físico</a></li>
+                                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-ant">Antecedentes</a></li>
+                                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-plan">Plan & Dx</a></li>
+                                </ul>
+                                <div class="tab-content p-3 border border-top-0 bg-light rounded-bottom">
+                                    <!-- Tab Examen -->
+                                    <div class="tab-pane fade show active" id="tab-exam">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label small">Signos Vitales (JSON)</label>
+                                                <input class="form-control font-monospace small" name="signos_vitales" placeholder='{"ta":"120/80", "fc":80, "temp":36.5}'>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <textarea class="form-control" name="examen_fisico_general" rows="3" placeholder="Examen General"></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <textarea class="form-control" name="examen_fisico_por_sistemas" rows="3" placeholder="Por Sistemas"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Tab Antecedentes -->
+                                    <div class="tab-pane fade" id="tab-ant">
+                                        <textarea class="form-control mb-2" name="antecedentes_personales" rows="2" placeholder="Personales"></textarea>
+                                        <textarea class="form-control mb-2" name="medicamentos_actuales" rows="2" placeholder="Medicamentos actuales"></textarea>
+                                        <textarea class="form-control" name="alergias_conocidas" rows="1" placeholder="Alergias"></textarea>
+                                    </div>
+                                    <!-- Tab Plan -->
+                                    <div class="tab-pane fade" id="tab-plan">
+                                        <label class="form-label small fw-bold">Impresión Diagnóstica *</label>
+                                        <textarea class="form-control mb-3" name="impresion_diagnostica" rows="2" required></textarea>
+                                        
+                                        <label class="form-label small fw-bold">Plan de Manejo *</label>
+                                        <textarea class="form-control" name="conducta_plan_manejo" rows="3" required></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 text-end mt-3">
+                                <button type="button" class="btn btn-link text-muted text-decoration-none me-2" data-bs-toggle="collapse" data-bs-target="#formCollapse">Cancelar</button>
+                                <button type="submit" class="btn btn-success px-4">Guardar Evolución</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label for="examen_fisico_general" class="form-label">Examen Físico General</label>
-                    <textarea class="form-control" id="examen_fisico_general" name="examen_fisico_general" rows="4"></textarea>
-                </div>
-                <div class="col-md-6">
-                    <label for="examen_fisico_por_sistemas" class="form-label">Examen Físico por Sistemas</label>
-                    <textarea class="form-control" id="examen_fisico_por_sistemas" name="examen_fisico_por_sistemas" rows="4"></textarea>
-                </div>
-                
-                <h6 class="mt-4">Diagnóstico y Plan</h6>
-                <div class="col-12">
-                    <label for="atencion-diagnostico" class="form-label">Impresión Diagnóstica</label>
-                    <textarea class="form-control" id="atencion-diagnostico" name="impresion_diagnostica" rows="2" required></textarea>
-                </div>
-                <div class="col-12">
-                    <label for="atencion-cie10" class="form-label">Códigos CIE10 (separados por coma)</label>
-                    <input type="text" class="form-control" id="atencion-cie10" name="codigos_cie10" placeholder="Ej: I10, E11.9, Z00.1">
-                </div>
-                <div class="col-12">
-                    <label for="atencion-plan" class="form-label">Conducta / Plan de Manejo</label>
-                    <textarea class="form-control" id="atencion-plan" name="conducta_plan_manejo" rows="3" required></textarea>
-                </div>
-                <div class="col-12 mt-3">
-                    <button type="submit" class="btn btn-primary">Guardar Atención</button>
-                </div>
-            </form>
-          </div>
+            </div>
+
+            <!-- Lista Historial -->
+            ${historyHTML}
         </div>
       </div>
     `;
-
-    setTimeout(() => {
-        const attentionForm = document.getElementById('new-attention-form');
-        if (attentionForm) {
-            document.getElementById('atencion-documento-id').value = paciente.documento_id;
-            attentionForm.addEventListener('submit', handleNewAttentionSubmit);
-        }
-    }, 0);
-  }
-
-  function toggleAttentionForm() {
-    const formContainer = document.getElementById('new-attention-form-container');
-    formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
-  }
-
-  async function handleNewAttentionSubmit(event) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
-    const atencionData = {};
-    formData.forEach((value, key) => { if(value) atencionData[key] = value });
     
-    const alertContainer = document.getElementById("attention-alert-container");
-    alertContainer.innerHTML = '';
+    // Re-attach listener al form
+    const form = document.getElementById('new-attention-form');
+    if(form) form.addEventListener('submit', handleSave);
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Limpieza básica de datos vacíos
+    Object.keys(data).forEach(k => !data[k] && delete data[k]);
+
+    if (data.signos_vitales) {
+        try { data.signos_vitales = JSON.parse(data.signos_vitales); } 
+        catch { alert("JSON de signos vitales inválido"); return; }
+    }
+    if (data.codigos_cie10) {
+        data.codigos_cie10 = data.codigos_cie10.split(',').map(x=>x.trim());
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const alertBox = document.getElementById('form-alert');
+    
+    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
+    alertBox.innerHTML = '';
 
     try {
-        const response = await fetch('/api/atenciones/', {
+        const res = await fetch('/api/atenciones/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(atencionData),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
         });
-        const responseData = await response.json();
-        if (!response.ok) {
-            throw responseData;
-        }
+        if (!res.ok) throw await res.json();
         
-        alertContainer.innerHTML = '<div class="alert alert-success" role="alert">Atención registrada exitosamente.</div>';
-        form.reset();
-        toggleAttentionForm();
-        document.getElementById('search-form').requestSubmit();
-    } catch (error) {
-        const errorMessage = formatFastApiError(error);
-        alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong><br>${errorMessage}</div>`;
+        alertBox.innerHTML = '<div class="alert alert-success">Guardado con éxito. Actualizando...</div>';
+        setTimeout(() => {
+            document.getElementById('search-form').requestSubmit(); // Recargar datos
+        }, 1000);
+    } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-danger">${formatError(err)}</div>`;
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Evolución';
     }
   }
 </script>
 
+<style>
+    /* Ajuste específico para el acordeón limpio */
+    .custom-accordion .accordion-button:not(.collapsed) {
+        background-color: rgba(14, 116, 144, 0.05); /* Primary muy suave */
+        color: var(--primary-color);
+        box-shadow: none;
+    }
+    .custom-accordion .accordion-button:focus {
+        box-shadow: none;
+        border-color: rgba(0,0,0,0.1);
+    }
+</style>
 {% endblock %}
