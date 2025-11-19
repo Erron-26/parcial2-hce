@@ -13,24 +13,31 @@
         Mis Datos Personales
     </div>
     <div class="card-body">
-        <h5 class="card-title">{{ user.primer_nombre }} {{ user.primer_apellido }}</h5>
+        <h5 class="card-title">{{ user.primer_nombre }} {{ user.segundo_nombre or '' }} {{ user.primer_apellido }} {{ user.segundo_apellido or '' }}</h5>
         <div class="row">
             <div class="col-md-6">
-                <p><strong>Documento:</strong> {{ user.documento_id }} ({{ user.tipo_documento }})</p>
-                <p><strong>Correo Electrónico:</strong> {{ user.correo_electronico }}</p>
+                <p><strong>Documento:</strong> {{ user.tipo_documento }} {{ user.documento_id }}</p>
                 <p><strong>Fecha de Nacimiento:</strong> {{ user.fecha_nacimiento }}</p>
+                <p><strong>Sexo:</strong> {{ user.sexo }}</p>
+                <p><strong>Género:</strong> {{ user.genero }}</p>
+                <p><strong>Estado Civil:</strong> {{ user.estado_civil }}</p>
             </div>
             <div class="col-md-6">
+                <p><strong>Dirección:</strong> {{ user.direccion_residencia }}, {{ user.municipio_ciudad }}, {{ user.departamento }}</p>
+                <p><strong>Teléfono:</strong> {{ user.telefono }} / <strong>Celular:</strong> {{ user.celular }}</p>
+                <p><strong>Correo Electrónico:</strong> {{ user.correo_electronico }}</p>
+                <p><strong>Ocupación:</strong> {{ user.ocupacion }}</p>
+            </div>
+             <div class="col-md-6 mt-3">
                 <p><strong>Entidad de Afiliación:</strong> {{ user.entidad_afiliacion }}</p>
                 <p><strong>Régimen:</strong> {{ user.regimen_afiliacion }}</p>
-                <p><strong>Rol:</strong> {{ user.tipo_usuario }}</p>
             </div>
         </div>
         <hr>
         <p class="card-text">
             Aquí podrás consultar tu historia clínica, ver resultados de exámenes y descargar documentos.
         </p>
-        <a href="#" class="btn btn-primary">Ver Mi Historia Clínica (Próximamente)</a>
+        <a href="/api/paciente/me/pdf" class="btn btn-success" target="_blank">Descargar Mi Historia Clínica en PDF</a>
     </div>
 </div>
 
@@ -45,11 +52,22 @@
                 <div class="list-group-item list-group-item-action flex-column align-items-start mb-2">
                     <div class="d-flex w-100 justify-content-between">
                         <h5 class="mb-1">{{ atencion.tipo_atencion }}</h5>
-                        <small>{{ atencion.fecha_hora_atencion.strftime('%d-%m-%Y %H:%M') }}</small>
+                        <small class="text-muted">{{ atencion.fecha_hora_atencion.strftime('%d-%m-%Y %H:%M') }}</small>
                     </div>
                     <p class="mb-1"><strong>Motivo:</strong> {{ atencion.motivo_consulta }}</p>
-                    <p class="mb-1"><strong>Diagnóstico:</strong> {{ atencion.impresion_diagnostica }}</p>
-                    <small>ID Atención: {{ atencion.atencion_id }}</small>
+                    <p class="mb-1"><strong>Enfermedad Actual:</strong> {{ atencion.enfermedad_actual }}</p>
+                    <p class="mb-1"><strong>Impresión Diagnóstica:</strong> {{ atencion.impresion_diagnostica }}</p>
+                    <p class="mb-1"><strong>Plan de Manejo:</strong> {{ atencion.conducta_plan_manejo }}</p>
+                    <details class="mt-2">
+                        <summary>Ver más detalles</summary>
+                        <ul class="list-unstyled mt-2">
+                            <li><strong>Antecedentes Personales:</strong> {{ atencion.antecedentes_personales or 'N/A' }}</li>
+                            <li><strong>Antecedentes Familiares:</strong> {{ atencion.antecedentes_familiares or 'N/A' }}</li>
+                            <li><strong>Alergias:</strong> {{ atencion.alergias_conocidas or 'N/A' }}</li>
+                            <li><strong>Examen Físico:</strong> {{ atencion.examen_fisico_general or 'N/A' }}</li>
+                        </ul>
+                    </details>
+                    <small class="text-muted">ID Atención: {{ atencion.atencion_id }}</small>
                 </div>
             {% endfor %}
             </div>

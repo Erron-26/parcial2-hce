@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta, datetime
 from typing import Optional, Any
 from io import BytesIO
@@ -93,6 +94,21 @@ def buscar_paciente_por_id(
     
     return paciente
 
+@app.get("/api/admision/pacientes/{documento_id}", response_model=schemas.Usuario, tags=["API Admisionistas"])
+def buscar_paciente_para_admision(
+    documento_id: int,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(check_role("admisionista"))
+):
+    paciente = db.query(models.Usuario).options(
+        joinedload(models.Usuario.atenciones)
+    ).filter(models.Usuario.documento_id == documento_id).first()
+    
+    if not paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    
+    return paciente
+
 @app.post("/api/pacientes/", response_model=schemas.Usuario, tags=["API Admisionistas"])
 async def crear_paciente(
     paciente_in: schemas.UsuarioCreate,
@@ -110,7 +126,7 @@ async def crear_paciente(
     hashed_password = get_password_hash(paciente_in.password)
     
     db_paciente = models.Usuario(
-        **paciente_in.model_dump(exclude={"password", "tipo_usuario"}),
+        **paciente_in.model_dump(exclude={"password", "tipo_usuario"}, exclude_none=True),
         hashed_password=hashed_password,
         tipo_usuario="paciente"
     )
@@ -128,6 +144,39 @@ async def crear_paciente(
     
     return db_paciente
 
+@app.put("/api/pacientes/{documento_id}", response_model=schemas.Usuario, tags=["API Admisionistas"])
+async def actualizar_paciente(
+    documento_id: int,
+    paciente_in: schemas.UsuarioUpdate,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(check_role("admisionista"))
+):
+    """
+    Actualiza la información demográfica de un paciente.
+    Requiere rol 'admisionista'.
+    """
+    db_paciente = db.query(models.Usuario).filter(models.Usuario.documento_id == documento_id).first()
+    if not db_paciente:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+    update_data = paciente_in.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(db_paciente, field, value)
+
+    try:
+        db.add(db_paciente)
+        db.commit()
+        db.refresh(db_paciente)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Error de integridad, el email ya podría estar en uso por otro usuario.",
+        )
+        
+    return db_paciente
+
 @app.post("/api/atenciones/", response_model=schemas.Atencion, tags=["API Médicos"])
 async def crear_atencion(
     atencion_in: schemas.AtencionCreate,
@@ -143,39 +192,36 @@ async def crear_atencion(
     if not paciente:
         raise HTTPException(status_code=404, detail="El paciente especificado no existe.")
 
-    # El médico actual es el profesional responsable
-    # NOTA: Esto asume que el médico está registrado en la tabla `profesional_salud`
-    # y que su `documento_id` en `usuario` coincide de alguna manera.
-    # Por simplicidad, aquí asumimos que el `current_user` tiene una clave
-    # que puede ser usada como `profesional_responsable`.
-    # en un sistema real, se necesitaría un mapeo más robusto.
-    # Por ahora, dejamos el campo profesional_responsable nulo.
-
-    atencion_data = atencion_in.model_dump()
+    atencion_data = atencion_in.model_dump(exclude_none=True)
     
     # Procesar la cadena de codigos_cie10 en una lista
     codigos_str = atencion_data.pop("codigos_cie10", None)
     if codigos_str:
-        codigos_list = [code.strip() for code in codigos_str.split(',')]
-        atencion_data['codigos_cie10'] = codigos_list
-    else:
-        atencion_data['codigos_cie10'] = None
+        atencion_data['codigos_cie10'] = [code.strip() for code in codigos_str.split(',')]
     
+    # Procesar la cadena JSON de signos_vitales
+    signos_vitales_str = atencion_data.pop("signos_vitales", None)
+    if signos_vitales_str:
+        try:
+            atencion_data['signos_vitales'] = json.loads(signos_vitales_str)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="El formato de Signos Vitales no es un JSON válido.")
+
     db_atencion = models.Atencion(
         **atencion_data,
         fecha_hora_atencion=datetime.now(),
-        # profesional_responsable=current_user.id_personal_salud # Descomentar si se implementa el mapeo
+        profesional_responsable=current_user.id_personal_salud if hasattr(current_user, 'id_personal_salud') else None
     )
     
     try:
         db.add(db_atencion)
         db.commit()
         db.refresh(db_atencion)
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
         raise HTTPException(
             status_code=409,
-            detail="Error de integridad al guardar la atención.",
+            detail=f"Error de integridad al guardar la atención. {e}",
         )
         
     return db_atencion
@@ -214,7 +260,7 @@ async def admisionista_page(request: Request, current_user: Any = Depends(check_
 
 @app.get("/exportar_pdf/{documento_id}", tags=["PDF"], response_class=StreamingResponse)
 async def exportar_historia_pdf(
-    request: Request,  # <--- 1. ESTO ES LO QUE TE FALTA (Define la variable)
+    request: Request,
     documento_id: int,
     db: Session = Depends(get_db),
     current_user: Any = Depends(check_role("medico"))
@@ -223,7 +269,7 @@ async def exportar_historia_pdf(
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
 
-    atenciones = db.query(models.Atencion).filter(models.Atencion.documento_id == documento_id).all()
+    atenciones = db.query(models.Atencion).filter(models.Atencion.documento_id == documento_id).order_by(models.Atencion.fecha_hora_atencion.desc()).all()
 
     for atencion in atenciones:
         if atencion.profesional_responsable:
@@ -234,17 +280,11 @@ async def exportar_historia_pdf(
         else:
             atencion.profesional_responsable_nombre = "No especificado"
 
-    # Renderizar HTML
     html_content = templates.TemplateResponse(
         "pdf_template.html", 
-        {
-            "request": request,  # <--- 2. Aquí se usa la variable definida arriba
-            "paciente": paciente, 
-            "atenciones": atenciones
-        }
+        {"request": request, "paciente": paciente, "atenciones": atenciones}
     ).body.decode("utf-8")
 
-    # Generar PDF con WeasyPrint
     pdf_buffer = BytesIO()
     HTML(string=html_content).write_pdf(pdf_buffer)
     pdf_buffer.seek(0)
@@ -255,6 +295,27 @@ async def exportar_historia_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+@app.get("/api/paciente/me/pdf", tags=["PDF", "Frontend Roles"], response_class=StreamingResponse)
+async def exportar_mi_historia_pdf(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(check_role("paciente"))
+):
+    """
+    Permite a un paciente descargar su propia historia clínica en PDF.
+    """
+    paciente = current_user
+    atenciones = db.query(models.Atencion).filter(models.Atencion.documento_id == paciente.documento_id).order_by(models.Atencion.fecha_hora_atencion.desc()).all()
+
+    for atencion in atenciones:
+        if atencion.profesional_responsable:
+            profesional = db.query(models.ProfesionalSalud).filter(
+                models.ProfesionalSalud.id_personal_salud == atencion.profesional_responsable
+            ).first()
+            atencion.profesional_responsable_nombre = profesional.nombre_completo if profesional else "Desconocido"
+        else:
+            atencion.profesional_responsable_nombre = "No especificado"
 
     html_content = templates.TemplateResponse(
         "pdf_template.html", 

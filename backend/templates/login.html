@@ -28,6 +28,15 @@
 </div>
 
 <script>
+  function formatFastApiError(errorData) {
+    if (!errorData || !errorData.detail) { return "Error desconocido o sin detalle."; }
+    if (Array.isArray(errorData.detail)) {
+        return errorData.detail.map(err => `<b>${err.loc.slice(1).join(' &rarr; ')}</b>: ${err.msg}`).join('<br>');
+    }
+    if (typeof errorData.detail === 'string') { return errorData.detail; }
+    return JSON.stringify(errorData.detail);
+  }
+
   document.getElementById("login-form").addEventListener("submit", async function(event) {
     event.preventDefault();
 
@@ -44,18 +53,17 @@
         method: "POST",
         body: formData
       });
-
+      
+      const responseData = await response.json();
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Error en el inicio de sesión");
+        throw responseData;
       }
-
-      const data = await response.json();
-      // El servidor establece la cookie, solo necesitamos redirigir.
+      
       window.location.href = "/dashboard";
 
     } catch (error) {
-      errorAlert.textContent = error.message;
+      const errorMessage = formatFastApiError(error);
+      errorAlert.innerHTML = `<strong>Error:</strong><br>${errorMessage}`;
       errorAlert.classList.remove("d-none");
     }
   });

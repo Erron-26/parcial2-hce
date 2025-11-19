@@ -9,6 +9,25 @@
 </div>
 
 <div class="card mb-4">
+    <div class="card-header">
+        Búsqueda y Actualización de Pacientes
+    </div>
+    <div class="card-body">
+        <h5 class="card-title">Buscar Paciente por Documento</h5>
+        <form id="search-form">
+            <div class="input-group">
+                <input type="number" class="form-control" id="search-doc-id" placeholder="Ingrese el número de documento" required>
+                <button class="btn btn-primary" type="submit">Buscar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="results-container" class="mb-4">
+    <!-- Los resultados de la búsqueda para actualización aparecerán aquí -->
+</div>
+
+<div class="card mb-4">
   <div class="card-header">
     Registro de Nuevo Paciente
   </div>
@@ -55,29 +74,84 @@
       <div class="col-md-6">
         <label for="sexo" class="form-label">Sexo</label>
         <select id="sexo" name="sexo" class="form-select">
-          <option value="Masculino">Masculino</option>
+          <option value="Masculino" selected>Masculino</option>
           <option value="Femenino">Femenino</option>
           <option value="Otro">Otro</option>
         </select>
+      </div>
+
+      <div class="col-md-6">
+        <label for="genero" class="form-label">Género</label>
+        <input type="text" class="form-control" id="genero" name="genero" placeholder="Ej: Masculino, Femenino, No binario">
+      </div>
+      <div class="col-md-6">
+        <label for="estado_civil" class="form-label">Estado Civil</label>
+        <select id="estado_civil" name="estado_civil" class="form-select">
+          <option value="Soltero" selected>Soltero(a)</option>
+          <option value="Casado">Casado(a)</option>
+          <option value="Union Libre">Unión Libre</option>
+          <option value="Divorciado">Divorciado(a)</option>
+          <option value="Viudo">Viudo(a)</option>
+        </select>
+      </div>
+      
+      <div class="col-md-4">
+        <label for="grupo_sanguineo" class="form-label">Grupo Sanguíneo</label>
+        <input type="text" class="form-control" id="grupo_sanguineo" name="grupo_sanguineo" placeholder="Ej: O, A, B, AB">
+      </div>
+      <div class="col-md-2">
+        <label for="factor_rh" class="form-label">Factor RH</label>
+        <input type="text" class="form-control" id="factor_rh" name="factor_rh" placeholder="Ej: + o -">
       </div>
 
       <div class="col-12">
         <label for="direccion_residencia" class="form-label">Dirección de Residencia</label>
         <input type="text" class="form-control" id="direccion_residencia" name="direccion_residencia" placeholder="Calle 123 #45-67">
       </div>
+      
+      <div class="col-md-6">
+        <label for="municipio_ciudad" class="form-label">Municipio/Ciudad</label>
+        <input type="text" class="form-control" id="municipio_ciudad" name="municipio_ciudad">
+      </div>
+      <div class="col-md-6">
+        <label for="departamento" class="form-label">Departamento</label>
+        <input type="text" class="form-control" id="departamento" name="departamento">
+      </div>
 
       <div class="col-md-6">
-        <label for="telefono" class="form-label">Teléfono</label>
+        <label for="telefono" class="form-label">Teléfono Fijo</label>
         <input type="tel" class="form-control" id="telefono" name="telefono">
       </div>
+      <div class="col-md-6">
+        <label for="celular" class="form-label">Celular</label>
+        <input type="tel" class="form-control" id="celular" name="celular">
+      </div>
+
       <div class="col-md-6">
         <label for="correo_electronico" class="form-label">Correo Electrónico</label>
         <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" required>
       </div>
-
       <div class="col-md-6">
-        <label for="password" class="form-label">Contraseña</label>
+        <label for="ocupacion" class="form-label">Ocupación</label>
+        <input type="text" class="form-control" id="ocupacion" name="ocupacion">
+      </div>
+      <div class="col-md-6">
+        <label for="password" class="form-label">Contraseña (Provisional)</label>
         <input type="password" class="form-control" id="password" name="password" required>
+      </div>
+
+      <h5 class="mt-4">Datos de Afiliación</h5>
+      <div class="col-md-6">
+        <label for="entidad_afiliacion" class="form-label">Entidad de Afiliación (EPS)</label>
+        <input type="text" class="form-control" id="entidad_afiliacion" name="entidad_afiliacion">
+      </div>
+      <div class="col-md-6">
+        <label for="regimen_afiliacion" class="form-label">Régimen de Afiliación</label>
+        <select id="regimen_afiliacion" name="regimen_afiliacion" class="form-select">
+          <option value="Contributivo" selected>Contributivo</option>
+          <option value="Subsidiado">Subsidiado</option>
+          <option value="Especial">Especial</option>
+        </select>
       </div>
 
       <div class="col-12 mt-4">
@@ -88,6 +162,27 @@
 </div>
 
 <script>
+  function formatFastApiError(errorData) {
+    if (!errorData || !errorData.detail) {
+        return "Error desconocido o sin detalle.";
+    }
+    if (Array.isArray(errorData.detail)) {
+        // Manejar errores de validación de Pydantic (422)
+        return errorData.detail.map(err => {
+            // location es un array, ej: ["body", "nombre_campo"]
+            const field = err.loc.length > 1 ? err.loc[1] : 'campo';
+            return `<b>${field}</b>: ${err.msg}`;
+        }).join('<br>');
+    }
+    // Manejar errores de HTTPException (ej. 401, 404)
+    if (typeof errorData.detail === 'string') {
+        return errorData.detail;
+    }
+    // Fallback para otros formatos
+    return JSON.stringify(errorData.detail);
+  }
+
+  // Script para el registro de un nuevo paciente
   document.getElementById("new-patient-form").addEventListener("submit", async function(event) {
     event.preventDefault();
 
@@ -95,7 +190,10 @@
     const formData = new FormData(form);
     const patientData = {};
     for (let [key, value] of formData.entries()) {
-      patientData[key] = value;
+      // No enviar campos vacíos, excepto los requeridos
+      if (value || form.elements[key].required) {
+          patientData[key] = value;
+      }
     }
     patientData['tipo_usuario'] = 'paciente'; // Asignar rol por defecto
 
@@ -105,26 +203,108 @@
     try {
       const response = await fetch("/api/pacientes/", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patientData)
       });
-
       const responseData = await response.json();
-
       if (!response.ok) {
-        throw new Error(responseData.detail || "Error al registrar paciente");
+        throw responseData; // Lanzar el objeto de error completo
       }
-
-      // Éxito
       alertContainer.innerHTML = '<div class="alert alert-success" role="alert">Paciente registrado exitosamente.</div>';
-      form.reset(); // Limpiar el formulario
-      
+      form.reset();
     } catch (error) {
-      alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong> ${error.message}</div>`;
+      const errorMessage = formatFastApiError(error);
+      alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error al registrar:</strong><br>${errorMessage}</div>`;
     }
   });
+
+  // Script para la búsqueda y actualización de pacientes
+  document.getElementById("search-form").addEventListener("submit", async function(event) {
+    event.preventDefault();
+    const docId = document.getElementById("search-doc-id").value;
+    const resultsContainer = document.getElementById("results-container");
+
+    resultsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+    try {
+      // Usamos el nuevo endpoint para admisionistas
+      const response = await fetch(`/api/admision/pacientes/${docId}`);
+      if (!response.ok) { throw await response.json(); }
+      const paciente = await response.json();
+      renderPatientUpdateForm(paciente);
+    } catch (error) {
+      const errorMessage = formatFastApiError(error);
+      resultsContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error en la búsqueda:</strong><br>${errorMessage}</div>`;
+    }
+  });
+
+  function renderPatientUpdateForm(paciente) {
+    const resultsContainer = document.getElementById("results-container");
+    const fechaNacimiento = paciente.fecha_nacimiento ? paciente.fecha_nacimiento.split('T')[0] : '';
+    
+    // Lógica para deshabilitar campos de grupo sanguíneo si ya tienen valor
+    const bloodTypeDisabled = paciente.grupo_sanguineo ? 'disabled' : '';
+
+    resultsContainer.innerHTML = `
+      <div class="card">
+        <div class="card-header"><h5>Actualizar Datos del Paciente</h5></div>
+        <div class="card-body">
+          <div id="update-alert-container"></div>
+          <form id="update-patient-form" class="row g-3">
+            <input type="hidden" name="documento_id" value="${paciente.documento_id}">
+            <div class="col-md-6"><label class="form-label">Tipo Documento</label><input type="text" class="form-control" name="tipo_documento" value="${paciente.tipo_documento || ''}"></div>
+            <div class="col-md-6"><label class="form-label"># Documento</label><input type="number" class="form-control" value="${paciente.documento_id}" disabled></div>
+            <div class="col-md-6"><label class="form-label">Primer Nombre</label><input type="text" class="form-control" name="primer_nombre" value="${paciente.primer_nombre || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Segundo Nombre</label><input type="text" class="form-control" name="segundo_nombre" value="${paciente.segundo_nombre || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Primer Apellido</label><input type="text" class="form-control" name="primer_apellido" value="${paciente.primer_apellido || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Segundo Apellido</label><input type="text" class="form-control" name="segundo_apellido" value="${paciente.segundo_apellido || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Fecha Nacimiento</label><input type="date" class="form-control" name="fecha_nacimiento" value="${fechaNacimiento}"></div>
+            <div class="col-md-6"><label class="form-label">Teléfono Fijo</label><input type="tel" class="form-control" name="telefono" value="${paciente.telefono || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Celular</label><input type="tel" class="form-control" name="celular" value="${paciente.celular || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Correo</label><input type="email" class="form-control" name="correo_electronico" value="${paciente.correo_electronico || ''}"></div>
+            <div class="col-md-6"><label class="form-label">Dirección</label><input type="text" class="form-control" name="direccion_residencia" value="${paciente.direccion_residencia || ''}"></div>
+            <div class="col-md-3"><label class="form-label">Grupo Sanguíneo</label><input type="text" class="form-control" name="grupo_sanguineo" value="${paciente.grupo_sanguineo || ''}" ${bloodTypeDisabled}></div>
+            <div class="col-md-3"><label class="form-label">Factor RH</label><input type="text" class="form-control" name="factor_rh" value="${paciente.factor_rh || ''}" ${bloodTypeDisabled}></div>
+            <div class="col-12 mt-3"><button type="submit" class="btn btn-primary">Guardar Cambios</button></div>
+          </form>
+        </div>
+      </div>`;
+    document.getElementById("update-patient-form").addEventListener("submit", handleUpdatePatient);
+  }
+
+  async function handleUpdatePatient(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const docId = formData.get("documento_id");
+    const updateData = {};
+    
+    // Incluir todos los campos del formulario, enviando un string vacío si el usuario lo borra
+    for (let [key, value] of formData.entries()) {
+      if (key !== 'documento_id') {
+        updateData[key] = value;
+      }
+    }
+
+    const alertContainer = document.getElementById("update-alert-container");
+    alertContainer.innerHTML = '';
+    try {
+      const response = await fetch(`/api/pacientes/${docId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw responseData;
+      }
+      alertContainer.innerHTML = '<div class="alert alert-success" role="alert">Paciente actualizado exitosamente.</div>';
+    } catch (error) {
+      const errorMessage = formatFastApiError(error);
+      alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error al actualizar:</strong><br>${errorMessage}</div>`;
+    }
+  }
 </script>
+
 
 {% endblock %}

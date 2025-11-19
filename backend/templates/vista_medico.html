@@ -28,26 +28,31 @@
 </div>
 
 <script>
+  function formatFastApiError(errorData) {
+    if (!errorData || !errorData.detail) { return "Error desconocido o sin detalle."; }
+    if (Array.isArray(errorData.detail)) {
+        return errorData.detail.map(err => `<b>${err.loc.slice(1).join(' &rarr; ')}</b>: ${err.msg}`).join('<br>');
+    }
+    if (typeof errorData.detail === 'string') { return errorData.detail; }
+    return JSON.stringify(errorData.detail);
+  }
+
   document.getElementById("search-form").addEventListener("submit", async function(event) {
     event.preventDefault();
     const docId = document.getElementById("search-doc-id").value;
     const resultsContainer = document.getElementById("results-container");
-
     resultsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
     try {
       const response = await fetch(`/api/pacientes/${docId}`);
-
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error en la búsqueda');
+        throw await response.json();
       }
-
       const paciente = await response.json();
       renderPatientData(paciente);
-
     } catch (error) {
-      resultsContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong> ${error.message}</div>`;
+      const errorMessage = formatFastApiError(error);
+      resultsContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong><br>${errorMessage}</div>`;
     }
   });
 
@@ -93,9 +98,10 @@
             <div id="attention-alert-container"></div>
             <form id="new-attention-form" class="row g-3">
                 <input type="hidden" id="atencion-documento-id" name="documento_id">
-                <div class="col-12">
+                
+                <div class="col-md-6">
                     <label for="atencion-tipo" class="form-label">Tipo de Atención</label>
-                    <input type="text" class="form-control" id="atencion-tipo" name="tipo_atencion" required>
+                    <input type="text" class="form-control" id="atencion-tipo" name="tipo_atencion" required value="Consulta Externa">
                 </div>
                 <div class="col-12">
                     <label for="atencion-motivo" class="form-label">Motivo de Consulta</label>
@@ -105,6 +111,40 @@
                     <label for="atencion-enfermedad" class="form-label">Enfermedad Actual</label>
                     <textarea class="form-control" id="atencion-enfermedad" name="enfermedad_actual" rows="3" required></textarea>
                 </div>
+
+                <h6 class="mt-4">Antecedentes</h6>
+                <div class="col-md-6">
+                    <label for="antecedentes_personales" class="form-label">Antecedentes Personales</label>
+                    <textarea class="form-control" id="antecedentes_personales" name="antecedentes_personales" rows="3"></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label for="antecedentes_familiares" class="form-label">Antecedentes Familiares</label>
+                    <textarea class="form-control" id="antecedentes_familiares" name="antecedentes_familiares" rows="3"></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label for="alergias_conocidas" class="form-label">Alergias Conocidas</label>
+                    <textarea class="form-control" id="alergias_conocidas" name="alergias_conocidas" rows="2"></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label for="medicamentos_actuales" class="form-label">Medicamentos Actuales</label>
+                    <textarea class="form-control" id="medicamentos_actuales" name="medicamentos_actuales" rows="2"></textarea>
+                </div>
+
+                <h6 class="mt-4">Examen Físico</h6>
+                <div class="col-12">
+                    <label for="signos_vitales" class="form-label">Signos Vitales (formato JSON)</label>
+                    <textarea class="form-control" id="signos_vitales" name="signos_vitales" rows="3" placeholder='{"ta": "120/80", "fc": 80, "fr": 18, "temp": 36.5, "sat": 98}'></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label for="examen_fisico_general" class="form-label">Examen Físico General</label>
+                    <textarea class="form-control" id="examen_fisico_general" name="examen_fisico_general" rows="4"></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label for="examen_fisico_por_sistemas" class="form-label">Examen Físico por Sistemas</label>
+                    <textarea class="form-control" id="examen_fisico_por_sistemas" name="examen_fisico_por_sistemas" rows="4"></textarea>
+                </div>
+                
+                <h6 class="mt-4">Diagnóstico y Plan</h6>
                 <div class="col-12">
                     <label for="atencion-diagnostico" class="form-label">Impresión Diagnóstica</label>
                     <textarea class="form-control" id="atencion-diagnostico" name="impresion_diagnostica" rows="2" required></textarea>
@@ -126,8 +166,7 @@
       </div>
     `;
 
-    // Event listener para el nuevo formulario de atención
-    setTimeout(() => { // Usar timeout para asegurar que el formulario está en el DOM
+    setTimeout(() => {
         const attentionForm = document.getElementById('new-attention-form');
         if (attentionForm) {
             document.getElementById('atencion-documento-id').value = paciente.documento_id;
@@ -138,11 +177,7 @@
 
   function toggleAttentionForm() {
     const formContainer = document.getElementById('new-attention-form-container');
-    if (formContainer.style.display === 'none') {
-      formContainer.style.display = 'block';
-    } else {
-      formContainer.style.display = 'none';
-    }
+    formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
   }
 
   async function handleNewAttentionSubmit(event) {
@@ -150,7 +185,7 @@
     const form = event.target;
     const formData = new FormData(form);
     const atencionData = {};
-    formData.forEach((value, key) => { atencionData[key] = value });
+    formData.forEach((value, key) => { if(value) atencionData[key] = value });
     
     const alertContainer = document.getElementById("attention-alert-container");
     alertContainer.innerHTML = '';
@@ -161,20 +196,18 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(atencionData),
         });
-
         const responseData = await response.json();
         if (!response.ok) {
-            throw new Error(responseData.detail || 'Error al guardar la atención');
+            throw responseData;
         }
         
         alertContainer.innerHTML = '<div class="alert alert-success" role="alert">Atención registrada exitosamente.</div>';
         form.reset();
         toggleAttentionForm();
-        // Refrescar la búsqueda para mostrar la nueva atención
         document.getElementById('search-form').requestSubmit();
-
     } catch (error) {
-        alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong> ${error.message}</div>`;
+        const errorMessage = formatFastApiError(error);
+        alertContainer.innerHTML = `<div class="alert alert-danger" role="alert"><strong>Error:</strong><br>${errorMessage}</div>`;
     }
   }
 </script>
