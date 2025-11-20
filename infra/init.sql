@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 2) Schema
 CREATE SCHEMA IF NOT EXISTS hcd;
 
--- 3) Tabla usuario: datos de identificaci�n del paciente
+-- 3) Tabla usuario: datos de identificación del paciente
 CREATE TABLE IF NOT EXISTS hcd.usuario (
   documento_id BIGINT PRIMARY KEY,
   tipo_documento VARCHAR(30),
@@ -36,12 +36,12 @@ CREATE TABLE IF NOT EXISTS hcd.usuario (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-COMMENT ON TABLE hcd.usuario IS 'Tabla de identificaci�n del paciente (Resoluci�n 1995/1999, Ley 1581/2012 - datos sensibles)';
+COMMENT ON TABLE hcd.usuario IS 'Tabla de identificación del paciente (Resolución 1995/1999, Ley 1581/2012 - datos sensibles)';
 
 CREATE INDEX IF NOT EXISTS idx_usuario_correo ON hcd.usuario (correo_electronico);
 CREATE INDEX IF NOT EXISTS idx_usuario_celular ON hcd.usuario (celular);
 
--- 4) Tabla profesional_salud (ser� tabla de referencia)
+-- 4) Tabla profesional_salud (será tabla de referencia)
 CREATE TABLE IF NOT EXISTS hcd.profesional_salud (
   id_personal_salud UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nombre_completo VARCHAR(255),
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS hcd.profesional_salud (
 COMMENT ON TABLE hcd.profesional_salud IS 'Datos del profesional que atiende';
 
 -- 5) Tabla atencion: CLAVE COMPUESTA (documento_id, atencion_id)
--- Para cumplir con requisito de Citus: PK debe incluir columna de distribuci�n
+-- Para cumplir con requisito de Citus: PK debe incluir columna de distribución
 CREATE TABLE IF NOT EXISTS hcd.atencion (
   atencion_id UUID DEFAULT uuid_generate_v4(),
   documento_id BIGINT NOT NULL,
@@ -92,12 +92,12 @@ CREATE TABLE IF NOT EXISTS hcd.atencion (
   responsable_registro VARCHAR(120),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  PRIMARY KEY (documento_id, atencion_id)  -- Clave compuesta incluyendo columna de distribuci�n
+  PRIMARY KEY (documento_id, atencion_id)  -- Clave compuesta incluyendo columna de distribución
 );
 
-COMMENT ON TABLE hcd.atencion IS 'Tabla con datos administrativos y cl�nicos por episodio de atenci�n';
+COMMENT ON TABLE hcd.atencion IS 'Tabla con datos administrativos y clínicos por episodio de atención';
 
--- �ndices de consulta r�pida
+-- Índices de consulta rápida
 CREATE INDEX IF NOT EXISTS idx_atencion_atencion_id ON hcd.atencion (atencion_id);
 CREATE INDEX IF NOT EXISTS idx_atencion_fecha ON hcd.atencion (documento_id, fecha_hora_atencion);
 CREATE INDEX IF NOT EXISTS idx_atencion_estado_egreso ON hcd.atencion (estado_egreso);
@@ -106,7 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_atencion_estado_egreso ON hcd.atencion (estado_eg
 CREATE TABLE IF NOT EXISTS hcd.diagnostico (
   diagnostico_id UUID DEFAULT uuid_generate_v4(),
   atencion_id UUID NOT NULL,
-  documento_id BIGINT NOT NULL,  -- Necesario para co-localizaci�n
+  documento_id BIGINT NOT NULL,  -- Necesario para co-localización
   tipo_diagnostico VARCHAR(80),
   diagnostico_text TEXT,
   codigo_cie10 VARCHAR(30),
@@ -122,7 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_diag_atencion ON hcd.diagnostico (atencion_id);
 CREATE TABLE IF NOT EXISTS hcd.tecnologia_salud (
   tecnologia_id UUID DEFAULT uuid_generate_v4(),
   atencion_id UUID NOT NULL,
-  documento_id BIGINT NOT NULL,  -- Necesario para co-localizaci�n
+  documento_id BIGINT NOT NULL,  -- Necesario para co-localización
   descripcion_medicamento TEXT,
   dosis VARCHAR(80),
   via_administracion VARCHAR(80),
@@ -142,7 +142,7 @@ CREATE INDEX IF NOT EXISTS idx_tec_atencion ON hcd.tecnologia_salud (atencion_id
 CREATE TABLE IF NOT EXISTS hcd.egreso (
   egreso_id UUID DEFAULT uuid_generate_v4(),
   atencion_id UUID NOT NULL,
-  documento_id BIGINT NOT NULL,  -- Necesario para co-localizaci�n
+  documento_id BIGINT NOT NULL,  -- Necesario para co-localización
   estado_egreso VARCHAR(80),
   causas_egreso TEXT,
   recomendaciones_al_egreso TEXT,
@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS hcd.egreso (
 -- SELECT create_distributed_table('hcd.tecnologia_salud', 'documento_id', colocate_with => 'hcd.atencion');
 -- SELECT create_distributed_table('hcd.egreso', 'documento_id', colocate_with => 'hcd.atencion');
 
--- 11) AGREGAR FOREIGN KEYS (despu�s de distribuir)
+-- 11) AGREGAR FOREIGN KEYS (después de distribuir)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -240,9 +240,6 @@ BEGIN
       ON DELETE CASCADE;
   END IF;
 END $$;
-
--- )
--- SELECT * FROM nueva_atencion;
 
 -- 12) Privilegios
 GRANT USAGE ON SCHEMA hcd TO public;

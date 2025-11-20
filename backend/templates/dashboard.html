@@ -4,16 +4,29 @@
 
 {% block content %}
 <div class="py-3">
-  <header class="d-flex justify-content-between align-items-end mb-5">
+     
+<header class="d-flex justify-content-between align-items-end mb-5">
     <div>
         <h6 class="text-uppercase text-primary-custom fw-bold ls-1 mb-1">Panel de Control</h6>
         <h2 class="fw-bold text-dark mb-0">Hola, {{ user.primer_nombre }}</h2>
         <p class="text-muted mt-1">Rol: <span class="badge bg-dark text-white">{{ user.tipo_usuario|capitalize }}</span></p>
     </div>
-    <div class="d-none d-md-block">
-        <span class="text-muted small">{{ request.headers.get('date') }}</span>
+    <div class="d-none d-md-block text-end">
+        <span class="text-muted small fw-bold text-uppercase" id="current-date"></span>
+        <div class="small text-muted" id="current-time"></div>
     </div>
   </header>
+  <script>
+    const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    const now = new Date();
+    let dateStr = now.toLocaleDateString('es-ES', dateOptions);
+    dateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+    
+    document.getElementById('current-date').textContent = dateStr;
+    document.getElementById('current-time').textContent = now.toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
+  </script>
+
+  
 
   <div class="row g-4">
     <!-- Tarjeta Médico -->

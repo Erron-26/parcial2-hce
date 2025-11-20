@@ -57,7 +57,7 @@ if ! command -v qrencode &> /dev/null; then
     elif command -v dnf &> /dev/null; then sudo dnf install -y qrencode
     elif command -v zypper &> /dev/null; then sudo zypper install -y qrencode
     elif command -v apk &> /dev/null; then sudo apk add qrencode
-    else echo -e "${RED}[SKIP] No se pudo instalar qrencode autom�ticamente.${NC}"; fi
+    else echo -e "${RED}[SKIP] No se pudo instalar qrencode automaticamente.${NC}"; fi
 fi
 
 # 2. DETECCIÓN DE IP

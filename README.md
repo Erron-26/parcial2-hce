@@ -10,39 +10,36 @@ El sistema ofrece una solución robusta para la interoperabilidad en el sector s
 
 -   **Base de Datos Distribuida:** Utiliza PostgreSQL con la extensión Citus para fragmentar y distribuir las tablas a lo largo de un clúster, permitiendo una alta escalabilidad y rendimiento en las consultas.
 -   **Middleware y API REST:** Un backend desarrollado en FastAPI que sirve como intermediario entre los clientes y la base de datos, exponiendo una API RESTful para todas las operaciones.
--   **Interfaces de Usuario por Rol:** Cuatro interfaces gráficas interactivas diseñadas a medida para los roles de:
-    -   **Paciente:** Consulta de su propia historia clínica.
-    -   **Admisionista:** Gestión de datos demográficos de los pacientes.
-    -   **Médico:** Acceso y registro de información clínica en las atenciones.
-    -   **Dashboard/Resultados:** Vista general de la actividad del sistema.
+-   **Interfaces de Usuario por Rol:** Interfaces gráficas interactivas, modernas y responsivas diseñadas a medida para los roles de:
+    -   **Paciente:** Consulta de su propia historia clínica y exportación de la misma.
+    -   **Admisionista:** Creación, búsqueda y actualización de datos demográficos de los pacientes.
+    -   **Médico:** Acceso completo al historial del paciente, registro de nuevas atenciones clínicas y exportación de HCE.
 -   **Seguridad Integral:**
-    -   **Autenticación:** Implementación del flujo de autorización OAuth2 para un inicio de sesión seguro.
-    -   **Autorización:** Uso de JSON Web Tokens (JWT) para proteger las rutas y garantizar que los usuarios solo accedan a los recursos permitidos para su rol.
--   **Exportación Segura de PDFs:** Generación de documentos PDF con la historia clínica de un paciente, una funcionalidad protegida que solo usuarios autenticados y autorizados pueden utilizar.
--   **Despliegue Automatizado en Kubernetes:** Todo el sistema, desde la base de datos hasta el middleware, está containerizado con Docker y se despliega de forma automatizada en un clúster de Kubernetes.
+    -   Autenticación segura basada en el estándar industrial **OAuth2**.
+    -   Autorización por roles mediante **JSON Web Tokens (JWT)** para proteger las rutas y los datos.
+    -   Almacenamiento seguro de contraseñas con hashing **Argon2**.
+-   **Exportación de PDFs:** Generación de documentos PDF con la historia clínica completa y unificada del paciente.
+-   **Despliegue Automatizado en Kubernetes:** Todo el sistema está containerizado con Docker y se despliega de forma automatizada en un clúster de Kubernetes local (Minikube) mediante un único script.
 
 ## Arquitectura del Sistema
 
 El sistema sigue una arquitectura de microservicios distribuida, diseñada para ser resiliente y escalable.
 
-1.  **Capa de Orquestación (Kubernetes):** Orquesta todos los componentes del sistema, gestionando los despliegues, servicios y la red interna.
-2.  **Capa de Datos (PostgreSQL + Citus):** Un clúster de base de datos compuesto por:
-    -   Un **nodo coordinador**, que gestiona los metadatos de la distribución y enruta las consultas.
-    -   Dos **nodos trabajadores**, que almacenan los fragmentos de datos (shards).
-3.  **Capa de Lógica de Negocio (FastAPI Middleware):** La aplicación principal escrita en Python, que contiene la lógica de negocio, se conecta a la base de datos y sirve la API REST y las interfaces de usuario.
+1.  **Capa de Orquestación (Kubernetes):** Orquesta todos los componentes del sistema, gestionando los despliegues, la persistencia de datos y la red interna.
+2.  **Capa de Datos (PostgreSQL + Citus):** Un clúster de base de datos compuesto por un **nodo coordinador** (que enruta las consultas) y múltiples **nodos trabajadores** (que almacenan los fragmentos de datos).
+3.  **Capa de Lógica de Negocio (FastAPI Middleware):** La aplicación principal escrita en Python. Contiene la lógica de negocio, se conecta a la base de datos, gestiona la seguridad y sirve tanto la API REST como las interfaces de usuario.
 4.  **Capa de Presentación (Jinja2 Templates):** Vistas HTML renderizadas del lado del servidor con Jinja2, lo que permite una integración sencilla y rápida con el backend de FastAPI.
-5.  **Capa de Seguridad (OAuth2 + JWT):** Integrada en el middleware, gestiona la autenticación de usuarios y la validación de tokens para el control de acceso.
 
 ## Stack Tecnológico
 
-| Componente      | Tecnología                                                                                             |
-| --------------- | ------------------------------------------------------------------------------------------------------ |
-| **Backend**     | Python 3.11, FastAPI, SQLAlchemy, Pydantic, Uvicorn, python-jose, passlib, argon2-cffi                  |
-| **Base de Datos** | PostgreSQL, Citus Data                                                                                 |
-| **Vistas**      | Jinja2, HTML5, CSS3                                                                                      |
-| **PDF**         | WeasyPrint                                                                                             |
-| **Infraestructura** | Docker, Kubernetes (Minikube)                                                                          |
-| **Scripts**     | Bash                                                                                                   |
+| Componente        | Tecnología                                                                       |
+| ----------------- | -------------------------------------------------------------------------------- |
+| **Backend**       | Python 3.11, FastAPI, SQLAlchemy, Pydantic, Uvicorn, python-jose, passlib, argon2-cffi |
+| **Base de Datos**   | PostgreSQL 16, Citus Data                                                        |
+| **Vistas**        | Jinja2, HTML5, Bootstrap 5, CSS3                                                 |
+| **PDF**           | WeasyPrint                                                                       |
+| **Infraestructura** | Docker, Kubernetes (Minikube)                                                    |
+| **Scripts**       | Bash                                                                             |
 
 ## Primeros Pasos: Instalación y Despliegue
 
@@ -65,9 +62,9 @@ bash setup.sh
 El script realizará los siguientes pasos:
 1.  Verificará que Docker y Minikube estén instalados y en ejecución.
 2.  Construirá la imagen Docker del middleware y la cargará en el entorno de Minikube.
-3.  Desplegará todos los recursos de Kubernetes definidos en `infra/k8s/`, incluyendo el clúster de Citus (coordinador y workers) y la aplicación FastAPI.
+3.  Desplegará todos los recursos de Kubernetes definidos en `infra/k8s/`.
 4.  Esperará a que todos los componentes estén listos y saludables.
-5.  Configurará la base de datos: creará las tablas, registrará los workers en el coordinador y distribuirá las tablas.
+5.  Configurará la base de datos distribuida (creará tablas, registrará workers, etc.).
 6.  Opcionalmente, te preguntará si deseas insertar datos de prueba.
 7.  Generará un archivo `backend/.env` con las credenciales de conexión a la base de datos.
 8.  Al finalizar, te proporcionará la URL para acceder a la aplicación.
@@ -91,6 +88,11 @@ python3 backend/scripts/create_admisionista_user.py
 python3 backend/scripts/create_medico_user.py
 python3 backend/scripts/create_test_user.py
 ```
+**Credenciales de prueba:**
+- **Admisionista:** `admisionista@hce.com` / `password123`
+- **Médico:** `medico@hce.com` / `password123`
+- **Paciente:** `test@hce.com` / `password123`
+
 
 ## Acceso Remoto para Presentaciones
 
@@ -105,10 +107,10 @@ bash remote_access.sh
 El script:
 1.  Detectará la IP local de tu máquina.
 2.  Abrirá temporalmente el puerto necesario en el firewall de tu sistema operativo.
-3.  Mostrará una **URL y un código QR** que puedes escanear con tu teléfono para acceder directamente a la página de login.
-4.  Creará un túnel `kubectl port-forward` para redirigir el tráfico del puerto local a la aplicación dentro de Minikube.
+3.  Creará un túnel `kubectl port-forward` para redirigir el tráfico.
+4.  Mostrará una **URL y un código QR** que puedes escanear con tu teléfono para acceder directamente a la página de login.
 
-**Importante:** Cuando termines tu presentación, simplemente presiona `Ctrl+C` en la terminal donde se ejecuta el script. Este se encargará de cerrar el túnel y la regla del firewall automáticamente, dejando tu sistema seguro.
+**Importante:** Cuando termines tu presentación, simplemente presiona `Ctrl+C` en la terminal donde se ejecuta el script. Este se encargará de cerrar el túnel y la regla del firewall automáticamente.
 
 ## Estructura del Proyecto
 
@@ -117,7 +119,7 @@ El script:
 ├── backend/            # Código fuente del middleware FastAPI
 │   ├── core/           # Configuración principal y seguridad
 │   ├── db/             # Modelos SQLAlchemy y sesión de BD
-│   ├── schemas.py      # Esquemas Pydantic para validación
+│   ├── scripts/        # Scripts para crear usuarios de prueba
 │   ├── templates/      # Plantillas HTML de Jinja2
 │   ├── app.py          # Aplicación principal FastAPI
 │   ├── Dockerfile      # Define la imagen del backend
@@ -126,7 +128,6 @@ El script:
 │   ├── k8s/            # Archivos YAML de Kubernetes para despliegues
 │   ├── init.sql        # Script de inicialización de la BD
 │   └── load_sample_data.sql # Datos de prueba
-├── venv/               # Entorno virtual de Python
 ├── remote_access.sh    # Script para acceso remoto y presentaciones
 ├── setup.sh            # Script de instalación automatizada
 └── README.md           # Este archivo
@@ -134,9 +135,8 @@ El script:
 
 ## Seguridad
 
--   **OAuth2 Password Flow:** La autenticación se maneja mediante el flujo "Password Flow" de OAuth2, donde el usuario envía sus credenciales y recibe un `access_token`.
--   **JWT Tokens:** El `access_token` es un JWT que contiene información del usuario (como su rol). Este token debe ser enviado en la cabecera `Authorization` de cada petición a rutas protegidas.
--   **Hashing de Contraseñas:** Las contraseñas se almacenan de forma segura en la base de datos utilizando el algoritmo **Argon2**, gracias a la librería `passlib`.
--   **CORS:** Configurado para permitir peticiones solo desde los orígenes esperados.
+-   **Autenticación:** Se maneja mediante el flujo "Password Flow" de OAuth2, donde el usuario envía sus credenciales y recibe un `access_token` almacenado en una cookie `HttpOnly`.
+-   **Autorización:** El `access_token` es un JWT que contiene el rol del usuario. Es validado en cada petición a rutas protegidas para garantizar el control de acceso adecuado.
+-   **Hashing de Contraseñas:** Las contraseñas se almacenan de forma segura en la base de datos utilizando el algoritmo **Argon2**.
 
 ¡Gracias por usar nuestro sistema!

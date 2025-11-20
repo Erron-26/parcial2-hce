@@ -116,11 +116,6 @@ class Atencion(Base):
     )
 
     usuario = relationship("Usuario", back_populates="atenciones")
-    # diagnosticos, tecnologias_salud y egreso tienen foreign keys complejas
-    # Se comentan por ahora para evitar errores de ambigüedad
-    # diagnosticos = relationship("Diagnostico", back_populates="atencion")
-    # tecnologias_salud = relationship("TecnologiaSalud", back_populates="atencion")
-    # egreso = relationship("Egreso", back_populates="atencion")
 
 
 class Diagnostico(Base):

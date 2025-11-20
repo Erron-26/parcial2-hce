@@ -211,25 +211,87 @@
                                 </ul>
                                 <div class="tab-content p-3 border border-top-0 bg-light rounded-bottom">
                                     <!-- Tab Examen -->
-                                    <div class="tab-pane fade show active" id="tab-exam">
-                                        <div class="row g-3">
-                                            <div class="col-12">
-                                                <label class="form-label small">Signos Vitales (JSON)</label>
-                                                <input class="form-control font-monospace small" name="signos_vitales" placeholder='{"ta":"120/80", "fc":80, "temp":36.5}'>
+                                    <!-- Tab Examen Físico Mejorado -->
+                            <div class="tab-pane fade show active" id="tab-exam"> 
+                                <label class="form-label small fw-bold text-primary-custom mb-2">Signos Vitales</label>
+                                <div class="card bg-light border-0 p-3 mb-3">
+                                    <div class="row g-3">
+                                        <div class="col-6 col-md-4 col-lg-2">
+                                            <label class="small text-muted fw-bold">T. Arterial</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="sv_ta" placeholder="120/80">
+                                                <span class="input-group-text text-muted">mmHg</span>
                                             </div>
-                                            <div class="col-md-6">
-                                                <textarea class="form-control" name="examen_fisico_general" rows="3" placeholder="Examen General"></textarea>
+                                        </div>
+                                        <div class="col-6 col-md-4 col-lg-2">
+                                            <label class="small text-muted fw-bold">F. Cardíaca</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="sv_fc" placeholder="80">
+                                                <span class="input-group-text text-muted">bpm</span>
                                             </div>
-                                            <div class="col-md-6">
-                                                <textarea class="form-control" name="examen_fisico_por_sistemas" rows="3" placeholder="Por Sistemas"></textarea>
+                                        </div>
+                                        <div class="col-6 col-md-4 col-lg-2">
+                                            <label class="small text-muted fw-bold">F. Resp.</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="sv_fr" placeholder="16">
+                                                <span class="input-group-text text-muted">rpm</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-4 col-lg-2">
+                                            <label class="small text-muted fw-bold">Temp.</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" step="0.1" class="form-control" id="sv_temp" placeholder="36.5">
+                                                <span class="input-group-text text-muted">°C</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-4 col-lg-2">
+                                            <label class="small text-muted fw-bold">Saturación</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" id="sv_sat" placeholder="98">
+                                                <span class="input-group-text text-muted">%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-4 col-lg-2">
+                                            <label class="small text-muted fw-bold">Peso</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" step="0.1" class="form-control" id="sv_peso" placeholder="70">
+                                                <span class="input-group-text text-muted">kg</span>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">Examen Físico General</label>
+                                        <textarea class="form-control" name="examen_fisico_general" rows="3" placeholder="Paciente consciente, orientado, hidratado..."></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-muted">Examen por Sistemas</label>
+                                        <textarea class="form-control" name="examen_fisico_por_sistemas" rows="3" placeholder="Cardiopulmonar: Ruidos rítmicos..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
                                     <!-- Tab Antecedentes -->
                                     <div class="tab-pane fade" id="tab-ant">
-                                        <textarea class="form-control mb-2" name="antecedentes_personales" rows="2" placeholder="Personales"></textarea>
-                                        <textarea class="form-control mb-2" name="medicamentos_actuales" rows="2" placeholder="Medicamentos actuales"></textarea>
-                                        <textarea class="form-control" name="alergias_conocidas" rows="1" placeholder="Alergias"></textarea>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-muted">Patológicos / Personales</label>
+                                                <textarea class="form-control" name="antecedentes_personales" rows="2" placeholder="HTA, Diabetes, Cirugías..."></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-muted">Familiares</label>
+                                                <!-- ¡AQUÍ ESTÁ EL CAMPO FALTANTE! -->
+                                                <textarea class="form-control" name="antecedentes_familiares" rows="2" placeholder="Padre, Madre, Hereditarios..."></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-muted">Farmacológicos / Actuales</label>
+                                                <textarea class="form-control" name="medicamentos_actuales" rows="2" placeholder="Medicamentos en uso..."></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold text-danger">Alergias</label>
+                                                <textarea class="form-control border-danger bg-danger bg-opacity-10" name="alergias_conocidas" rows="2" placeholder="Medicamentos, Alimentos..."></textarea>
+                                            </div>
+                                        </div>
                                     </div>
                                     <!-- Tab Plan -->
                                     <div class="tab-pane fade" id="tab-plan">
@@ -262,18 +324,43 @@
     if(form) form.addEventListener('submit', handleSave);
   }
 
-  async function handleSave(e) {
+async function handleSave(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
     
-    // Limpieza básica de datos vacíos
+    // --- NUEVA LÓGICA DE SIGNOS VITALES ---
+    // Recolectamos los inputs individuales
+    const signosVitalesObj = {
+        ta: document.getElementById('sv_ta').value,
+        fc: document.getElementById('sv_fc').value,
+        fr: document.getElementById('sv_fr').value,
+        temp: document.getElementById('sv_temp').value,
+        sat: document.getElementById('sv_sat').value,
+        peso: document.getElementById('sv_peso').value
+    };
+
+    // Filtramos los vacíos (para no guardar claves con valor "")
+    const signosVitalesLimpio = {};
+    let haySignos = false;
+    Object.keys(signosVitalesObj).forEach(key => {
+        if (signosVitalesObj[key]) {
+            signosVitalesLimpio[key] = signosVitalesObj[key];
+            haySignos = true;
+        }
+    });
+
+    // Si el médico escribió al menos un signo vital, lo agregamos al objeto data
+    if (haySignos) {
+        data.signos_vitales = signosVitalesLimpio; // El backend lo recibirá ya como objeto JSON (FastAPI + Pydantic lo manejan)
+    } else {
+        data.signos_vitales = null;
+    }
+    // ---------------------------------------
+
+    // Limpieza básica de datos vacíos del resto del form
     Object.keys(data).forEach(k => !data[k] && delete data[k]);
 
-    if (data.signos_vitales) {
-        try { data.signos_vitales = JSON.parse(data.signos_vitales); } 
-        catch { alert("JSON de signos vitales inválido"); return; }
-    }
     if (data.codigos_cie10) {
         data.codigos_cie10 = data.codigos_cie10.split(',').map(x=>x.trim());
     }
@@ -282,7 +369,7 @@
     const alertBox = document.getElementById('form-alert');
     
     btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
     alertBox.innerHTML = '';
 
     try {
@@ -293,16 +380,34 @@
         });
         if (!res.ok) throw await res.json();
         
-        alertBox.innerHTML = '<div class="alert alert-success">Guardado con éxito. Actualizando...</div>';
+        alertBox.innerHTML = '<div class="alert alert-success shadow-sm"><i class="bi bi-check-circle me-2"></i>Evolución registrada correctamente.</div>';
+        
+        // Limpiar formulario manual para los campos no controlados por form.reset()
+        document.getElementById('sv_ta').value = '';
+        document.getElementById('sv_fc').value = '';
+        document.getElementById('sv_fr').value = '';
+        document.getElementById('sv_temp').value = '';
+        document.getElementById('sv_sat').value = '';
+        document.getElementById('sv_peso').value = '';
+        e.target.reset();
+
         setTimeout(() => {
-            document.getElementById('search-form').requestSubmit(); // Recargar datos
-        }, 1000);
+            document.getElementById('search-form').requestSubmit(); // Recargar datos del paciente
+            // Cerrar collapse
+            const collapseElement = document.getElementById('formCollapse');
+            const bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
+            if(bsCollapse) bsCollapse.hide();
+            
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar Evolución';
+            alertBox.innerHTML = '';
+        }, 1500);
     } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-danger">${formatError(err)}</div>`;
+        alertBox.innerHTML = `<div class="alert alert-danger shadow-sm"><i class="bi bi-exclamation-triangle me-2"></i>${formatError(err)}</div>`;
         btn.disabled = false;
         btn.innerHTML = 'Guardar Evolución';
     }
-  }
+}
 </script>
 
 <style>

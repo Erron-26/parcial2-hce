@@ -103,8 +103,8 @@
                         </div>
                     </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold text-muted">Sexo Biológico</label>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">Sexo</label>
                         <select name="sexo" class="form-select">
                             <option value="Masculino">Masculino</option>
                             <option value="Femenino">Femenino</option>
@@ -114,8 +114,20 @@
                         <label class="form-label small fw-bold text-muted">Género</label>
                         <input type="text" class="form-control" name="genero" placeholder="Opcional">
                     </div>
+                    
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-muted">Grupo Sanguíneo</label>
+                        <label class="form-label small fw-bold text-muted">Estado Civil</label>
+                        <select name="estado_civil" class="form-select">
+                            <option value="Soltero" selected>Soltero/a</option>
+                            <option value="Casado">Casado/a</option>
+                            <option value="Union Libre">Unión Libre</option>
+                            <option value="Divorciado">Divorciado/a</option>
+                            <option value="Viudo">Viudo/a</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted">G. Sanguíneo</label>
                         <select name="grupo_sanguineo" class="form-select">
                             <option value="" selected disabled>--</option>
                             <option value="O">O</option>
@@ -124,7 +136,7 @@
                             <option value="AB">AB</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted">RH</label>
                         <select name="factor_rh" class="form-select">
                             <option value="+" selected>+</option>

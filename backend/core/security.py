@@ -11,7 +11,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi.security.oauth2 import OAuth2
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 from fastapi import Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend.db import models
 from backend.core.config import settings
@@ -174,7 +174,9 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    user = db.query(models.Usuario).filter(
+    user = db.query(models.Usuario).options(
+        joinedload(models.Usuario.atenciones)
+    ).filter(
         models.Usuario.correo_electronico == username
     ).first()
     
